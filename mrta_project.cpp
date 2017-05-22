@@ -8,7 +8,7 @@
 #define NUM_ROBOT 4
 #define NUM_TASK 16
 #define MAX_ENERGY 2000
-#define TIME_MAX 400
+#define TIME_MAX 4000
 
 #define IDLE 0
 #define WORKING 1
@@ -123,8 +123,26 @@ public:
 	bool atTask();
 };
 
+class RobotToTask
+{
+public:
+	int robotID;
+	int taskID;
+	std::vector <coordinate> path;
+	int cost;
+};
+
+class RobotToTasks
+{
+public:
+	int robotID;
+	RobotToTask * list;
+};
+
 int pathValidation(std::vector <coordinate> inputPath, coordinate start, coordinate end);
 void print_result(Robot * robotList, int mode);
+std::vector <coordinate> pathGeneration(coordinate start, coordinate end);
+void scheduling(RobotToTask * pathes, int robotNum, int taskNum);
 
 
 int main()
@@ -424,45 +442,8 @@ int main()
 	}
 	printf("\n");
 
+	std::vector <coordinate> path = pathGeneration(robotList[0].robotcoord, itemCoord[0]);
 	
-	coordinate currentPos;
-	coordinate itemPos = itemCoord[0];
-	std::vector <coordinate> asdff;
-
-	currentPos.x = robotList[0].robotcoord.x;
-	currentPos.y = robotList[0].robotcoord.y;
-
-	asdff.push_back(currentPos);
-
-	int xDiff = itemPos.x - currentPos.x;
-	int yDiff = itemPos.y - currentPos.y;
-
-	while (xDiff!=0 || yDiff!=0)
-	{
-		if (xDiff > 0) {
-			currentPos.x = currentPos.x + 1;
-		}
-		else if (xDiff == 0) {
-			currentPos.x = currentPos.x;
-			if (yDiff > 0) {
-				currentPos.y = currentPos.y + 1;
-			}
-			else if (yDiff == 0) {
-				currentPos.y = currentPos.y;
-			}
-			else {
-				currentPos.y = currentPos.y - 1;
-			}
-		}
-		else {
-			currentPos.x = currentPos.x - 1;
-		}
-
-		asdff.push_back(currentPos);
-
-		xDiff = itemPos.x - currentPos.x;
-		yDiff = itemPos.y - currentPos.y;
-	}
 	//currentPos.x = 1;
 
 	//asdff.push_back(currentPos);
@@ -471,7 +452,7 @@ int main()
 
 	//asdff.push_back(currentPos);
 
-	robotList[0].assignTask(0, asdff, itemCoord);
+	robotList[0].assignTask(0, path, itemCoord);
 	
 
 	int taskProgress[NUM_ROBOT] = {0,};
@@ -538,7 +519,7 @@ int main()
 				{
 					//robotList[index].energy -= robotList[index].getTravelCost();
 					//movingProgress[index] -= robotList[index].getTravelCost();
-					movingProgress[index] -= 10;
+					movingProgress[index] -= 1;
 				}
 				else
 				{
@@ -571,7 +552,7 @@ int main()
 				
 				if(taskProgress[index] > 0)
 				{
-					taskProgress[index] -= 10;
+					taskProgress[index] -= 1;
 					printf("robot %d is working on task %d\n", index, robotList[index].taskList[robotList[index].curr_task].taskId);
 				}
 				else if(taskProgress[index] <= 0)
@@ -661,7 +642,7 @@ void Robot::assignTask(int taskId, std::vector<coordinate> inputPath, coordinate
 
 		printf("path assigned from (%d, %d) to (%d, %d)\n", current.x, current.y, next.x, next.y);
 
-		pass = pathValidation(inputPath, current, next);
+		//pass = pathValidation(inputPath, current, next);
 		
 		if(pass == 0)
 		{
@@ -900,7 +881,77 @@ int pathValidation(std::vector <coordinate> inputPath, coordinate start, coordin
 std::vector <coordinate> pathGeneration(coordinate start, coordinate end) {
 	std::vector <coordinate> path;
 
-	path.push_back(start);
+	coordinate currentPos;
+	coordinate itemPos = end;
 
+	currentPos.x = start.x;
+	currentPos.y = start.y;
+
+	path.push_back(currentPos);
+
+	int xDiff = itemPos.x - currentPos.x;
+	int yDiff = itemPos.y - currentPos.y;
+
+	while (xDiff != 0 || yDiff != 0)
+	{
+		if (xDiff > 0) {
+			currentPos.x = currentPos.x + 1;
+		}
+		else if (xDiff == 0) {
+			currentPos.x = currentPos.x;
+			if (yDiff > 0) {
+				currentPos.y = currentPos.y + 1;
+			}
+			else if (yDiff == 0) {
+				currentPos.y = currentPos.y;
+			}
+			else {
+				currentPos.y = currentPos.y - 1;
+			}
+		}
+		else {
+			currentPos.x = currentPos.x - 1;
+		}
+
+		path.push_back(currentPos);
+
+		xDiff = itemPos.x - currentPos.x;
+		yDiff = itemPos.y - currentPos.y;
+	}
 	return path;
 }
+
+/*
+void scheduling(RobotToTask * pathes, int robotNum, int taskNum) {
+	int ** scheduleTable = new int * [taskNum];
+
+	for (int i = 0; i < taskNum; i++) {
+		scheduleTable[i] = new int[robotNum];
+	}
+
+	for (int i = 0; i < robotNum; i++) {
+		RobotToTask curRobot = pathes[i];
+		std::vector <coordinate> * path = curRobot.path;
+		int * costs = curRobot.cost;
+		for (int j = 0; j < taskNum; j++) {
+			scheduleTable[j][i] = costs[j];
+		}
+	}
+
+	int *robotIDs = new int[robotNum];
+	for (int i = 0; i < taskNum; i++) {
+		int robotID = 0;
+		int minCost = 10000;
+
+		for (int j = 0; j < robotNum; j++)
+		{
+			if (scheduleTable[i][j] < minCost) {
+				robotID = j;
+				minCost = scheduleTable[i][j];
+			}
+		}
+
+		
+	}
+}
+*/
