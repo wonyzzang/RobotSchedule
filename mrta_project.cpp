@@ -23,44 +23,53 @@ int hWallMatrix[MAP_SIZE-1][MAP_SIZE];
 int vWallMatrix[MAP_SIZE][MAP_SIZE-1];
 int terreinMatrix[MAP_SIZE][MAP_SIZE];
 
-class coordinate
+/* Class : Coordinate */
+class Coordinate
 {
 public:
+	Coordinate();
+	Coordinate(int xx, int yy);
+
 	int x;
 	int y;
-
-	coordinate(int xx, int yy)
-	{
-		x = xx;
-		y = yy;	
-	}
-
-	coordinate()
-	{
-		x = 0;
-		y = 0;
-	}
-
 };
 
-class task
+Coordinate::Coordinate()
+{
+	x = 0;
+	y = 0;
+}
+
+Coordinate::Coordinate(int xx, int yy)
+{
+	x = xx;
+	y = yy;
+}
+
+
+/* Class : Task */
+class Task
 {
 public:
-	coordinate taskcoord;
-	std::vector<coordinate> path;
+	Coordinate taskcoord;
+	std::vector<Coordinate> path;
 	int taskId;
 	int taskCost;
 };
 
+
+/* Class : Robot */
 class Robot
 {
 public:
 
-	coordinate robotcoord;
-	coordinate taskCoord[NUM_TASK]; 
-	int travelCost[MAP_SIZE][MAP_SIZE]; //travel cost of block coordinate
+	Robot();
+
+	Coordinate robotcoord;
+	Coordinate taskCoord[NUM_TASK];
+	int travelCost[MAP_SIZE][MAP_SIZE]; //travel cost of block Coordinate
 	int taskCost[NUM_TASK]; // cost of a task performed by this robot
-	task taskList[NUM_TASK];// list of tasks assgined to this robot
+	Task taskList[NUM_TASK];// list of tasks assgined to this robot
 
 	int totalCost;// total energy consumed
 	int totalBlocks; // total number of blocks traveled
@@ -72,66 +81,197 @@ public:
 	int curr_task;
 	int pathIndex;
 
-	Robot()
-	{
-		robotcoord.x = 0;
-		robotcoord.y = 0;
-
-		num_task = 0;
-
-		energy = MAX_ENERGY;
-
-		status = IDLE;
-		curr_task = 0;
-		pathIndex = 0;
-
-		for(int ii = 0; ii < NUM_TASK; ii++)
-		{
-			taskCoord[ii].x = 0;
-			taskCoord[ii].y = 0;
-			taskCost[ii] = 0;
-
-			taskList[ii].taskId = -1;
-		}
-
-		for(int ii = 0; ii < MAP_SIZE; ii++)
-		{
-			for(int jj = 0; jj < MAP_SIZE; jj++)
-			{
-				travelCost[ii][jj] = 0;
-			}
-		}
-
-		totalCost = 0;
-		totalBlocks = 0;
-	}
-
-	void assignTask(int taskId, std::vector<coordinate> inputPath, coordinate *location);
+	void assignTask(int taskId, std::vector<Coordinate> inputPath, Coordinate itemList[]);
 
 	void calcCost();
 
 	int getTravelCost();
-	int getTravelCost(int x,int y);
+	int getTravelCost(int x, int y);
 
 	int getTaskCost();
 	int getTaskCost(int x);
 
-	coordinate getCurrentPosition();
+	Coordinate getCurrentPosition();
 
 	void updatePostion();
-	
+
 	bool atTask();
 };
 
+Robot::Robot() {
+	robotcoord.x = 0;
+	robotcoord.y = 0;
+
+	num_task = 0;
+
+	energy = MAX_ENERGY;
+
+	status = IDLE;
+	curr_task = 0;
+	pathIndex = 0;
+
+	for (int ii = 0; ii < NUM_TASK; ii++)
+	{
+		taskCoord[ii].x = 0;
+		taskCoord[ii].y = 0;
+		taskCost[ii] = 0;
+
+		taskList[ii].taskId = -1;
+	}
+
+	for (int ii = 0; ii < MAP_SIZE; ii++)
+	{
+		for (int jj = 0; jj < MAP_SIZE; jj++)
+		{
+			travelCost[ii][jj] = 0;
+		}
+	}
+
+	totalCost = 0;
+	totalBlocks = 0;
+}
+
+void Robot::assignTask(int taskId, std::vector<Coordinate> inputPath, Coordinate itemList[])
+{
+	Coordinate current;
+	Coordinate next;
+
+	int pass = 0;
+
+	if (num_task < NUM_TASK)
+	{
+		if (num_task == 0)
+		{
+			current.x = robotcoord.x;
+			current.y = robotcoord.y;
+		}
+		else
+		{
+			current.x = itemList[taskList[num_task - 1].taskId].x;
+			current.y = itemList[taskList[num_task - 1].taskId].y;
+		}
+
+		next.x = itemList[taskId].x;
+		next.y = itemList[taskId].y;
+
+		printf("path assigned from (%d, %d) to (%d, %d)\n", current.x, current.y, next.x, next.y);
+
+		//pass = pathValidation(inputPath, current, next);
+
+		if (pass == 0)
+		{
+			taskList[num_task].taskId = taskId;
+			taskList[num_task].path = inputPath;
+			taskList[num_task].taskcoord.x = next.x;
+			taskList[num_task].taskcoord.y = next.y;
+			num_task++;
+		}
+		else
+		{
+			printf("assignment validation failed\n");
+		}
+	}
+	else
+	{
+		printf("too many task assignment failed\n");
+	}
+
+	getchar();
+}
+
+void Robot::calcCost()
+{
+	int tempCost = 0;
+	int tempBlocks = 0;
+	int costList = 0;
+
+	for (int ii = 0; ii < num_task; ii++)
+	{
+		tempCost = 0;
+		tempBlocks = 0;
+
+		if (taskList[ii].path.empty() == false)
+		{
+			for (int jj = 0; jj < taskList[ii].path.size(); jj++)
+			{
+				tempCost += travelCost[taskList[ii].path.at(jj).y][taskList[ii].path.at(jj).x];
+				tempBlocks++;
+			}
+		}
+
+		totalCost += tempCost;
+		totalBlocks += tempBlocks;
+
+		totalCost += taskCost[taskList[ii].taskId];
+	}
+}
+
+
+int Robot::getTravelCost()
+{
+	return travelCost[robotcoord.y][robotcoord.x];
+}
+
+int Robot::getTravelCost(int x, int y)
+{
+	return travelCost[y][x];
+}
+
+int Robot::getTaskCost()
+{
+	return taskCost[taskList[curr_task].taskId];
+}
+
+int Robot::getTaskCost(int x)
+{
+	return taskCost[x];
+}
+
+Coordinate Robot::getCurrentPosition()
+{
+	return robotcoord;
+}
+
+bool Robot::atTask()
+{
+	if (robotcoord.x == taskList[curr_task].taskcoord.x && robotcoord.y == taskList[curr_task].taskcoord.y)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+void Robot::updatePostion()
+{
+	pathIndex++;
+
+	if (pathIndex < taskList[curr_task].path.size())
+	{
+		robotcoord.x = taskList[curr_task].path.at(pathIndex).x;
+		robotcoord.y = taskList[curr_task].path.at(pathIndex).y;
+	}
+	else
+	{
+		pathIndex = 0;
+	}
+}
+
+
+/* Class : RobotToTask */
 class RobotToTask
 {
 public:
 	int robotID;
 	int taskID;
-	std::vector <coordinate> path;
+	std::vector <Coordinate> path;
 	int cost;
 };
 
+
+/* Class : RobotToTasks */
 class RobotToTasks
 {
 public:
@@ -139,10 +279,372 @@ public:
 	RobotToTask * list;
 };
 
-int pathValidation(std::vector <coordinate> inputPath, coordinate start, coordinate end);
+int pathValidation(std::vector <Coordinate> inputPath, Coordinate start, Coordinate end);
 void print_result(Robot * robotList, int mode);
-std::vector <coordinate> pathGeneration(coordinate start, coordinate end);
-void scheduling(RobotToTask * pathes, int robotNum, int taskNum);
+std::vector <Coordinate> pathGeneration(Coordinate start, Coordinate end);
+RobotToTasks * forTest();
+int * scheduling(RobotToTasks * pathes, int robotNum, int taskNum);
+
+
+void print_result(Robot  * robotList, int mode)
+{
+	int totalConsumption = 0;
+
+	printf("results\n");
+
+	totalConsumption = 0;
+
+	for (int ii = 0; ii < NUM_ROBOT; ii++)
+	{
+		printf("robot %d energy : %d\n", ii, robotList[ii].totalCost);
+		totalConsumption += robotList[ii].totalCost;
+	}
+	printf("energy consumption total : %d\n", totalConsumption);
+
+	for (int ii = 0; ii < NUM_ROBOT; ii++)
+	{
+		printf("robot %d path length : %d\n", ii, robotList[ii].totalBlocks);
+	}
+	printf("\n");
+}
+
+int pathValidation(std::vector <Coordinate> inputPath, Coordinate start, Coordinate end)
+{
+
+	for (int ii = 0; ii < inputPath.size() - 1; ii++) {
+		int pathx = inputPath.at(ii).x;
+		int pathy = inputPath.at(ii).y;
+		printf("path (%d,%d)\n", pathx, pathy);
+	}
+	int pass = 0;
+
+	if (inputPath.at(0).x != start.x || inputPath.at(0).y != start.y)
+	{
+		pass = 1;
+	}
+
+	if (inputPath.at(inputPath.size() - 1).x != end.x || inputPath.at(inputPath.size() - 1).y != end.y)
+	{
+		pass = 2;
+	}
+
+	int xdiff = 0;
+	int ydiff = 0;
+
+	int prevx = 0;
+	int prevy = 0;
+	int nextx = 0;
+	int nexty = 0;
+
+	for (int ii = 0; ii < inputPath.size() - 1; ii++)
+	{
+		nextx = inputPath.at(ii + 1).x;
+		nexty = inputPath.at(ii + 1).y;
+		prevx = inputPath.at(ii).x;
+		prevy = inputPath.at(ii).y;
+
+		xdiff = nextx - prevx;
+		ydiff = nexty - prevy;
+
+		if (xdiff == -1 && ydiff == 0)
+		{
+			//left
+			if (vWallMatrix[prevy][prevx - 1] == 1)
+			{
+				pass = 4;
+			}
+		}
+		else if (xdiff == 1 && ydiff == 0)
+		{
+			//right
+			if (vWallMatrix[prevy][prevx] == 1)
+			{
+				pass = 4;
+			}
+		}
+		else if (ydiff == -1 && xdiff == 0)
+		{
+			//up
+			if (hWallMatrix[prevy - 1][prevx] == 1)
+			{
+				pass = 4;
+			}
+		}
+		else if (ydiff == 1 && xdiff == 0)
+		{
+			//down
+			if (hWallMatrix[prevy][prevx] == 1)
+			{
+				pass = 4;
+			}
+		}
+		else
+		{
+			pass = 8;
+		}
+	}
+
+	if (pass > 0)
+	{
+		printf("invalid path : ");
+
+		if (pass >= 8)
+		{
+			printf("jump path,");
+			pass -= 8;
+		}
+
+		if (pass >= 4)
+		{
+			printf("path through wall,");
+			pass -= 4;
+		}
+		if (pass >= 2)
+		{
+			printf("end position,");
+			pass -= 2;
+		}
+		if (pass == 1)
+		{
+			printf("start position");
+			pass -= 1;
+		}
+		printf("\n");
+
+		pass = 1;
+	}
+
+	return pass;
+
+}
+
+std::vector <Coordinate> pathGeneration(Coordinate start, Coordinate end) {
+	std::vector <Coordinate> path;
+
+	Coordinate currentPos;
+	Coordinate itemPos = end;
+
+	currentPos.x = start.x;
+	currentPos.y = start.y;
+
+	path.push_back(currentPos);
+
+	int xDiff = itemPos.x - currentPos.x;
+	int yDiff = itemPos.y - currentPos.y;
+
+	while (xDiff != 0 || yDiff != 0)
+	{
+		if (xDiff > 0) {
+			currentPos.x = currentPos.x + 1;
+		}
+		else if (xDiff == 0) {
+			currentPos.x = currentPos.x;
+			if (yDiff > 0) {
+				currentPos.y = currentPos.y + 1;
+			}
+			else if (yDiff == 0) {
+				currentPos.y = currentPos.y;
+			}
+			else {
+				currentPos.y = currentPos.y - 1;
+			}
+		}
+		else {
+			currentPos.x = currentPos.x - 1;
+		}
+
+		path.push_back(currentPos);
+
+		xDiff = itemPos.x - currentPos.x;
+		yDiff = itemPos.y - currentPos.y;
+	}
+	return path;
+}
+
+
+int * scheduling(RobotToTasks * pathes, int robotNum, int taskNum) {
+	int * scheduledRobot = new int[robotNum];
+	int * scheduledTask = new int[taskNum];
+	int ** scheduleTable = new int *[taskNum];
+
+	int * minCostPerTask = new int[taskNum];
+	int * robotIDs = new int[taskNum];
+
+	// initiate scheduled robot array
+	for (int i = 0; i < robotNum; i++) {
+		scheduledRobot[i] = -1;
+	}
+
+	// initiate scheduled task array
+	for (int j = 0; j < taskNum; j++) {
+		scheduledTask[j] = -1;
+	}
+
+	// make table for scheduling
+	for (int j = 0; j < taskNum; j++) {
+		scheduleTable[j] = new int[robotNum];
+	}
+
+	for (int i = 0; i < robotNum; i++) {
+		RobotToTasks curRobot = pathes[i];
+		for (int j = 0; j < taskNum; j++) {
+			RobotToTask task = curRobot.list[j];
+			scheduleTable[j][i] = task.cost;
+		}
+	}
+
+	// find min cost per task
+	for (int j = 0; j < taskNum; j++) {
+		int robotID = -1;
+		int minCost = 1000000;
+
+		for (int i = 0; i < robotNum; i++)
+		{
+			if (scheduleTable[j][i] < minCost) {
+				robotID = i;
+				minCost = scheduleTable[j][i];
+			}
+		}
+		robotIDs[j] = robotID;
+		minCostPerTask[j] = minCost;
+	}
+
+	// scheduling
+	for (int i = 0; i < robotNum; i++) {
+		for (int j = 0; j < taskNum; j++) {
+			printf("%d cost task %d\n", minCostPerTask[j], j);
+		}
+
+		int taskID = -1;
+		int minCost = 1000000;
+
+		// find min cost task and robot
+		for (int j = 0; j < taskNum; j++) {
+			if (scheduledTask[j] == -1) {
+				if (minCostPerTask[j] < minCost) {
+					taskID = j;
+					minCost = minCostPerTask[j];
+				}
+			}
+		}
+
+		int selectedRobot = robotIDs[taskID];
+		scheduledRobot[selectedRobot] = taskID;
+		scheduledTask[taskID] = selectedRobot;
+		printf("robot%d is allocated to task%d\n", selectedRobot, taskID);
+
+		// update minCostPerTask
+		for (int j = 0; j < taskNum; j++) {
+			if (scheduledTask[j] == -1) {
+				if (selectedRobot == robotIDs[j]) {
+					int robotID = -1;
+					int minCost = 1000000;
+
+					for (int i = 0; i < robotNum; i++)
+					{
+						if (scheduleTable[j][i] < minCost && scheduledRobot[i] == -1) {
+							robotID = i;
+							minCost = scheduleTable[j][i];
+						}
+					}
+					robotIDs[j] = robotID;
+					minCostPerTask[j] = minCost;
+				}
+			}
+			else {
+				continue;
+			}
+		}
+	}
+
+	for (int i = 0; i < robotNum; i++) {
+		printf("robot%d is assigned to tast%d\n", i, scheduledRobot[i]);
+	}
+
+	return scheduledRobot;
+
+}
+
+RobotToTasks * forTest() {
+	Coordinate ro1, ro2, ro3;
+	Coordinate t1, t2, t3, t4;
+
+	ro1.x = 7;
+	ro1.y = 5;
+	ro2.x = 3;
+	ro2.y = 4;
+	ro3.x = 1;
+	ro3.y = 8;
+
+	t1.x = 5;
+	t1.y = 9;
+	t2.x = 1;
+	t2.y = 2;
+	t3.x = 4;
+	t3.y = 2;
+	t4.x = 8;
+	t4.y = 9;
+
+	RobotToTasks * result = new RobotToTasks[3];
+
+	RobotToTask * l1 = new RobotToTask[4];
+	RobotToTask r1t1;
+	r1t1.cost = 100;
+	l1[0] = r1t1;
+	RobotToTask r1t2;
+	r1t2.cost = 130;
+	l1[1] = r1t2;
+	RobotToTask r1t3;
+	r1t3.cost = 60;
+	l1[2] = r1t3;
+	RobotToTask r1t4;
+	r1t4.cost = 80;
+	l1[3] = r1t4;
+	RobotToTasks r1;
+	r1.list = l1;
+
+	RobotToTask * l2 = new RobotToTask[4];
+	RobotToTask r2t1;
+	r2t1.cost = 70;
+	l2[0] = r2t1;
+	RobotToTask r2t2;
+	r2t2.cost = 50;
+	l2[1] = r2t2;
+	RobotToTask r2t3;
+	r2t3.cost = 90;
+	l2[2] = r2t3;
+	RobotToTask r2t4;
+	r2t4.cost = 100;
+	l2[3] = r2t4;
+	RobotToTasks r2;
+	r2.list = l2;
+
+	RobotToTask * l3 = new RobotToTask[4];
+	RobotToTask r3t1;
+	r3t1.cost = 120;
+	l3[0] = r3t1;
+	RobotToTask r3t2;
+	r3t2.cost = 90;
+	l3[1] = r3t2;
+	RobotToTask r3t3;
+	r3t3.cost = 80;
+	l3[2] = r3t3;
+	RobotToTask r3t4;
+	r3t4.cost = 70;
+	l3[3] = r3t4;
+	RobotToTasks r3;
+	r3.list = l3;
+
+	result[0] = r1;
+	result[1] = r2;
+	result[2] = r3;
+
+	return result;
+
+}
+
+
+/* MAIN */
 
 
 int main()
@@ -152,10 +654,7 @@ int main()
 	char data;
 
 	// map loading and generating
-
 	FILE  * fp;
-
-	//fp = fopen("hwall10.txt", "r");
 	fopen_s(&fp, "hwall10.txt", "r");
 
 	int i = 0;
@@ -182,11 +681,11 @@ int main()
 
 	fclose(fp);
 
-	//fp = fopen("vwall10.txt", "r");
 	fopen_s(&fp, "vwall10.txt", "r");
 	
 	i = 0;
 	j = 0;
+
 	while(fscanf_s(fp, "%c", &data ) != EOF)
 	{
 		if(data == ' ')
@@ -195,15 +694,12 @@ int main()
 		}
 		else if(data == '\n')
 		{
-			
 			i++;
-			
 			j = 0;
 		}
 		else if(data != 13)
 		{
 			vWallMatrix[i][j] = data-48;
-			
 		}
 	}
 	fclose(fp);
@@ -220,7 +716,7 @@ int main()
 	}
 
 	int asdf = 0;
-	asdf = rand()%40 + 50;
+	asdf = rand() % 40 + 50;
 
 	for(int index = 0; index < NUM_ROBOT; index++)
 	{
@@ -241,7 +737,7 @@ int main()
 	}
 		
 	//spawn tasks
-	coordinate itemCoord[NUM_TASK];
+	Coordinate itemCoord[NUM_TASK];
 	for(int ii = 0; ii< NUM_TASK; ii ++)
 	{
 		itemCoord[ii].x = 11;
@@ -347,7 +843,7 @@ int main()
 
 	int same;
 
-	coordinate newItem;
+	Coordinate newItem;
 	
 	int doneList[NUM_TASK] = {0,};
 
@@ -380,8 +876,8 @@ int main()
 		same = 1;
 		while(same == 1)
 		{
-			newItem.x = rand()%MAP_SIZE;
-			newItem.y = rand()%MAP_SIZE;
+			newItem.x = rand() % MAP_SIZE;
+			newItem.y = rand() % MAP_SIZE;
 			same = 0;
 			
 			for(int jj = 0; jj < NUM_ROBOT; jj++)
@@ -391,6 +887,7 @@ int main()
 					same = 1;
 				}
 			}
+
 			for(int jj = 0; jj < ii; jj++)
 			{
 				if(newItem.x == itemCoord[jj].x && newItem.y == itemCoord[jj].y)
@@ -410,8 +907,8 @@ int main()
 
 	for(int ii = 0; ii < NUM_TASK; ii++)
 	{
-		tempCost[0][ii] = rand()%200;
-		tempCost[1][ii] = rand()%280;
+		tempCost[0][ii] = rand() % 200;
+		tempCost[1][ii] = rand() % 280;
 	}
 
 	for(int index = 0; index < NUM_ROBOT; index++)
@@ -421,8 +918,8 @@ int main()
 			robotList[index].taskCost[ii] = tempCost[index%2][ii];
 		}
 	}
-	printf("\n");
 
+	printf("\n");
 	printf("task cost\ntask\t");
 	
 	for(int ii = 0; ii < NUM_TASK; ii++)
@@ -442,7 +939,16 @@ int main()
 	}
 	printf("\n");
 
-	std::vector <coordinate> path = pathGeneration(robotList[0].robotcoord, itemCoord[0]);
+	
+
+	RobotToTasks * test = forTest();
+	int * scheduled = scheduling(test, 3, 4);
+
+	for (int i = 0; i < 3; i++) {
+		int taskID = scheduled[i];
+		std::vector <Coordinate> path = pathGeneration(robotList[i].robotcoord, itemCoord[taskID]);
+		robotList[i].assignTask(scheduled[i], path, itemCoord);
+	}
 	
 	//currentPos.x = 1;
 
@@ -452,7 +958,7 @@ int main()
 
 	//asdff.push_back(currentPos);
 
-	robotList[0].assignTask(0, path, itemCoord);
+	//robotList[0].assignTask(0, path, itemCoord);
 	
 
 	int taskProgress[NUM_ROBOT] = {0,};
@@ -616,342 +1122,3 @@ int main()
 	//print_result(robotList, 0);
 }
 
-void Robot::assignTask(int taskId, std::vector<coordinate> inputPath, coordinate itemList[])
-{
-
-	coordinate current;
-	coordinate next;
-
-	int pass= 0;
-
-	if(num_task < NUM_TASK)
-	{
-		if(num_task == 0)
-		{
-			current.x = robotcoord.x;
-			current.y = robotcoord.y;
-		}
-		else
-		{
-			current.x = itemList[taskList[num_task-1].taskId].x;
-			current.y = itemList[taskList[num_task-1].taskId].y;
-		}
-
-		next.x = itemList[taskId].x;
-		next.y = itemList[taskId].y;
-
-		printf("path assigned from (%d, %d) to (%d, %d)\n", current.x, current.y, next.x, next.y);
-
-		//pass = pathValidation(inputPath, current, next);
-		
-		if(pass == 0)
-		{
-			taskList[num_task].taskId = taskId;
-			taskList[num_task].path = inputPath;
-			taskList[num_task].taskcoord.x = next.x;
-			taskList[num_task].taskcoord.y = next.y;
-			num_task++;
-		}
-		else
-		{
-			printf("assignment validation failed\n");
-		}
-	}
-	else
-	{
-		printf("too many task assignment failed\n");
-	}
-
-	getchar();
-}
-
-void Robot::calcCost()
-{
-	int tempCost = 0;
-	int tempBlocks = 0;
-	int costList = 0;
-
-	for(int ii = 0; ii < num_task; ii++)
-	{
-		tempCost = 0;
-		tempBlocks = 0;
-
-		if(taskList[ii].path.empty() == false)
-		{
-			for(int jj = 0; jj < taskList[ii].path.size(); jj++)
-			{
-				tempCost += travelCost[taskList[ii].path.at(jj).y][taskList[ii].path.at(jj).x];
-				tempBlocks++;
-			}
-		}
-
-		totalCost += tempCost;
-		totalBlocks += tempBlocks;
-
-		totalCost += taskCost[taskList[ii].taskId];
-	}
-}
-
-
-int Robot::getTravelCost()
-{
-	return travelCost[robotcoord.y][robotcoord.x];
-}
-
-int Robot::getTravelCost(int x, int y)
-{
-	return travelCost[y][x];
-}
-
-int Robot::getTaskCost()
-{
-	return taskCost[taskList[curr_task].taskId];
-}
-
-int Robot::getTaskCost(int x)
-{
-	return taskCost[x];
-}
-
-coordinate Robot::getCurrentPosition()
-{
-	return robotcoord;
-}
-
-bool Robot::atTask()
-{
-	if(robotcoord.x == taskList[curr_task].taskcoord.x && robotcoord.y == taskList[curr_task].taskcoord.y)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
-
-void Robot::updatePostion()
-{
-	pathIndex++;
-	
-	if(pathIndex < taskList[curr_task].path.size())
-	{
-		robotcoord.x = taskList[curr_task].path.at(pathIndex).x;
-		robotcoord.y = taskList[curr_task].path.at(pathIndex).y;
-	}
-	else
-	{
-		pathIndex = 0;
-	}
-	
-}
-
-void print_result(Robot  * robotList, int mode )
-{
-	int totalConsumption = 0;
-
-	printf("results\n");
-	
-	totalConsumption = 0;
-
-	for(int ii = 0; ii < NUM_ROBOT; ii++)
-	{
-		printf("robot %d energy : %d\n",ii, robotList[ii].totalCost);
-		totalConsumption += robotList[ii].totalCost;
-	}
-	printf("energy consumption total : %d\n", totalConsumption);
-	
-	for(int ii = 0; ii < NUM_ROBOT; ii++)
-	{
-		printf("robot %d path length : %d\n",ii, robotList[ii].totalBlocks);
-	}
-	printf("\n");
-}
-
-int pathValidation(std::vector <coordinate> inputPath, coordinate start, coordinate end)
-{
-
-	for (int ii = 0; ii < inputPath.size() - 1; ii++) {
-		int pathx = inputPath.at(ii).x;
-		int pathy = inputPath.at(ii).y;
-		printf("path (%d,%d)\n", pathx, pathy);
-	}
-	int pass = 0;
-	
-	if(inputPath.at(0).x != start.x || inputPath.at(0).y != start.y)
-	{
-		pass = 1;
-	}
-	
-	if(inputPath.at(inputPath.size()-1).x != end.x || inputPath.at(inputPath.size()-1).y != end.y)
-	{
-		pass = 2;
-	}
-	
-	int xdiff = 0;
-	int ydiff = 0;
-
-	int prevx = 0;
-	int prevy = 0;
-	int nextx = 0;
-	int nexty = 0;
-
-	for(int ii = 0; ii < inputPath.size()-1; ii++)
-	{
-		nextx = inputPath.at(ii+1).x;
-		nexty = inputPath.at(ii+1).y;
-		prevx = inputPath.at(ii).x;
-		prevy = inputPath.at(ii).y;
-
-		xdiff = nextx - prevx;
-		ydiff = nexty - prevy;
-
-		if(xdiff == -1 && ydiff == 0)
-		{
-			//left
-			if(vWallMatrix[prevy][prevx-1] == 1)
-			{
-				pass = 4;
-			}
-		}
-		else if(xdiff == 1 && ydiff == 0)
-		{
-			//right
-			if(vWallMatrix[prevy][prevx] == 1)
-			{
-				pass = 4;
-			}
-		}
-		else if(ydiff == -1 && xdiff == 0)
-		{
-			//up
-			if(hWallMatrix[prevy-1][prevx] == 1)
-			{
-				pass = 4;
-			}
-		}
-		else if(ydiff == 1 && xdiff == 0)
-		{
-			//down
-			if(hWallMatrix[prevy][prevx] == 1)
-			{
-				pass = 4;
-			}
-		}
-		else
-		{
-			pass = 8;
-		}
-	}
-
-	if(pass > 0)
-	{
-		printf("invalid path : ");
-
-		if(pass >= 8)
-		{
-			printf("jump path,");
-			pass -= 8;
-		}
-
-		if(pass >= 4)
-		{
-			printf("path through wall,");
-			pass -= 4;
-		}
-		if(pass >= 2)
-		{
-			printf("end position,");
-			pass -= 2;
-		}
-		if(pass == 1)
-		{
-			printf("start position");
-			pass -= 1;
-		}
-		printf("\n");
-
-		pass = 1;
-	}
-
-	return pass;
-
-}
-
-std::vector <coordinate> pathGeneration(coordinate start, coordinate end) {
-	std::vector <coordinate> path;
-
-	coordinate currentPos;
-	coordinate itemPos = end;
-
-	currentPos.x = start.x;
-	currentPos.y = start.y;
-
-	path.push_back(currentPos);
-
-	int xDiff = itemPos.x - currentPos.x;
-	int yDiff = itemPos.y - currentPos.y;
-
-	while (xDiff != 0 || yDiff != 0)
-	{
-		if (xDiff > 0) {
-			currentPos.x = currentPos.x + 1;
-		}
-		else if (xDiff == 0) {
-			currentPos.x = currentPos.x;
-			if (yDiff > 0) {
-				currentPos.y = currentPos.y + 1;
-			}
-			else if (yDiff == 0) {
-				currentPos.y = currentPos.y;
-			}
-			else {
-				currentPos.y = currentPos.y - 1;
-			}
-		}
-		else {
-			currentPos.x = currentPos.x - 1;
-		}
-
-		path.push_back(currentPos);
-
-		xDiff = itemPos.x - currentPos.x;
-		yDiff = itemPos.y - currentPos.y;
-	}
-	return path;
-}
-
-/*
-void scheduling(RobotToTask * pathes, int robotNum, int taskNum) {
-	int ** scheduleTable = new int * [taskNum];
-
-	for (int i = 0; i < taskNum; i++) {
-		scheduleTable[i] = new int[robotNum];
-	}
-
-	for (int i = 0; i < robotNum; i++) {
-		RobotToTask curRobot = pathes[i];
-		std::vector <coordinate> * path = curRobot.path;
-		int * costs = curRobot.cost;
-		for (int j = 0; j < taskNum; j++) {
-			scheduleTable[j][i] = costs[j];
-		}
-	}
-
-	int *robotIDs = new int[robotNum];
-	for (int i = 0; i < taskNum; i++) {
-		int robotID = 0;
-		int minCost = 10000;
-
-		for (int j = 0; j < robotNum; j++)
-		{
-			if (scheduleTable[i][j] < minCost) {
-				robotID = j;
-				minCost = scheduleTable[i][j];
-			}
-		}
-
-		
-	}
-}
-*/
