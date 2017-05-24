@@ -798,32 +798,10 @@ void buildMap() {
 		}
 	}
 	fclose(fp);
-
-
-	/* initialize recognized map */
-	for (int ii = 0; ii < MAP_SIZE; ii++)
-	{
-		for (int jj = 0; jj < MAP_SIZE; jj++)
-		{
-			if (jj < MAP_SIZE - 1)
-			{
-				recognizedHWall[ii][jj] = 0;
-
-			}
-		}
-		for (int jj = 0; jj < MAP_SIZE; jj++)
-		{
-			if (ii < MAP_SIZE - 1)
-			{
-				recognizedVWall[ii][jj] = 0;
-			}
-		}
-	}
 }
 
 
 /* MAIN */
-
 
 int main()
 {
