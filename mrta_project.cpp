@@ -23,6 +23,39 @@ int hWallMatrix[MAP_SIZE-1][MAP_SIZE];
 int vWallMatrix[MAP_SIZE][MAP_SIZE-1];
 int terreinMatrix[MAP_SIZE][MAP_SIZE];
 
+/* 벽 감지 배열
+wall recognition 0 초기화, 모르는곳은 0, 벽이 있으면 1, 벽이 없으면 -1
+*/
+int hwallSearch[MAP_SIZE - 1][MAP_SIZE] = { 0, };	
+int vwallSearch[MAP_SIZE][MAP_SIZE - 1] = { 0, };
+
+class Node
+{
+public:
+
+	Coordinate pos;	//	좌표계 설정
+	unsigned int nodeCost;	// 코스트
+
+	Node *left;
+	Node *right;
+	Node *up;
+	Node *down;
+
+	Node(int xx, int yy, int cost)
+	{
+		pos.x = xx;
+		pos.y = yy;
+		nodeCost = cost;
+	}
+	Node()
+	{
+		pos.x = 0;
+		pos.y = 0;
+		nodeCost = 0;
+	}
+};
+
+
 /* Class : Coordinate */
 class Coordinate
 {
