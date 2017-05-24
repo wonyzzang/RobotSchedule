@@ -8,7 +8,7 @@
 #define NUM_ROBOT 4
 #define NUM_TASK 16
 #define MAX_ENERGY 2000
-#define TIME_MAX 4000
+#define TIME_MAX 400
 
 #define IDLE 0
 #define WORKING 1
@@ -23,40 +23,12 @@ int hWallMatrix[MAP_SIZE-1][MAP_SIZE];
 int vWallMatrix[MAP_SIZE][MAP_SIZE-1];
 int terreinMatrix[MAP_SIZE][MAP_SIZE];
 
-/* 벽 감지 배열
-wall recognition 0 초기화, 모르는곳은 0, 벽이 있으면 1, 벽이 없으면 -1
+int hWallSearch[MAP_SIZE - 1][MAP_SIZE] = { 0, };
+int vWallSearch[MAP_SIZE][MAP_SIZE - 1] = { 0, };
+
+/* 
+Class : Coordinate 
 */
-int hwallSearch[MAP_SIZE - 1][MAP_SIZE] = { 0, };	
-int vwallSearch[MAP_SIZE][MAP_SIZE - 1] = { 0, };
-
-class Node
-{
-public:
-
-	Coordinate pos;	//	좌표계 설정
-	unsigned int nodeCost;	// 코스트
-
-	Node *left;
-	Node *right;
-	Node *up;
-	Node *down;
-
-	Node(int xx, int yy, int cost)
-	{
-		pos.x = xx;
-		pos.y = yy;
-		nodeCost = cost;
-	}
-	Node()
-	{
-		pos.x = 0;
-		pos.y = 0;
-		nodeCost = 0;
-	}
-};
-
-
-/* Class : Coordinate */
 class Coordinate
 {
 public:
@@ -80,7 +52,9 @@ Coordinate::Coordinate(int xx, int yy)
 }
 
 
-/* Class : Task */
+/* 
+Class : Task 
+*/
 class Task
 {
 public:
@@ -91,7 +65,9 @@ public:
 };
 
 
-/* Class : Robot */
+/* 
+Class : Robot 
+*/
 class Robot
 {
 public:
@@ -127,6 +103,7 @@ public:
 	Coordinate getCurrentPosition();
 
 	void updatePostion();
+	void recognizeWalls();
 
 	bool atTask();
 };
@@ -208,8 +185,6 @@ void Robot::assignTask(int taskId, std::vector<Coordinate> inputPath, Coordinate
 	{
 		printf("too many task assignment failed\n");
 	}
-
-	getchar();
 }
 
 void Robot::calcCost()
@@ -292,8 +267,88 @@ void Robot::updatePostion()
 	}
 }
 
+/* 
+Function : recognizeWalls
+recognize walls around the robot 
+*/
+void Robot::recognizeWalls() 
+{
+	int x = robotcoord.x;
+	int y = robotcoord.y;
 
-/* Class : RobotToTask */
+	/* vertical walls */
+	if (x != 0) {
+		if (vWallMatrix[y][x - 1] == 1) {
+			if (vWallSearch[y][x - 1] != 1) {
+				vWallSearch[y][x - 1] = 1;
+				printf("(%d,%d) vwall recognized\n", x - 1, y);
+			}
+		}
+	}
+
+	if (x != MAP_SIZE-1) {
+		if (vWallMatrix[y][x] == 1) {
+			if (vWallSearch[y][x] != 1) {
+				vWallSearch[y][x] = 1;
+				printf("(%d,%d) vwall recognized\n", x, y);
+			}
+		}
+	}
+
+	/* horizontal walls */
+	if (y != 0) {
+		if (hWallMatrix[y-1][x] == 1) {
+			if (hWallSearch[y - 1][x] != 1) {
+				hWallSearch[y - 1][x] = 1;
+				printf("(%d,%d) hwall recognized\n", x, y - 1);
+			}
+		}
+	}
+
+	if (y != MAP_SIZE - 1) {
+		if (hWallMatrix[y][x] == 1) {
+			if (hWallSearch[y][x] != 1) {
+				hWallSearch[y][x] = 1;
+				printf("(%d,%d) hwall recognized\n", x, y);
+			}
+		}
+	}
+}
+
+/* 
+Class : Node
+*/
+class Node
+{
+public:
+	Node();
+	Node(int xx, int yy, int cost);
+
+	Coordinate pos;	//	좌표계 설정
+	unsigned int nodeCost;	// 코스트
+
+	Node *left;
+	Node *right;
+	Node *up;
+	Node *down;
+};
+
+Node::Node(int xx, int yy, int cost) {
+	pos.x = xx;
+	pos.y = yy;
+	nodeCost = cost;
+}
+
+Node::Node() {
+	pos.x = 0;
+	pos.y = 0;
+	nodeCost = 0;
+}
+
+
+/* 
+Class : RobotToTask 
+*/
 class RobotToTask
 {
 public:
@@ -304,7 +359,9 @@ public:
 };
 
 
-/* Class : RobotToTasks */
+/* 
+Class : RobotToTasks 
+*/
 class RobotToTasks
 {
 public:
@@ -451,6 +508,11 @@ int pathValidation(std::vector <Coordinate> inputPath, Coordinate start, Coordin
 
 }
 
+
+/* 
+Function : pathGeneration
+temporary function to generate path 
+*/
 std::vector <Coordinate> pathGeneration(Coordinate start, Coordinate end) {
 	std::vector <Coordinate> path;
 
@@ -494,7 +556,10 @@ std::vector <Coordinate> pathGeneration(Coordinate start, Coordinate end) {
 	return path;
 }
 
-
+/* 
+Function : scheduling
+perform min-min scheduling (need to revise later)
+*/
 int * scheduling(RobotToTasks * pathes, int robotNum, int taskNum) {
 	int * scheduledRobot = new int[robotNum];
 	int * scheduledTask = new int[taskNum];
@@ -598,6 +663,10 @@ int * scheduling(RobotToTasks * pathes, int robotNum, int taskNum) {
 
 }
 
+/* 
+Function : forTest
+temporary function for test 
+*/
 RobotToTasks * forTest() {
 	Coordinate ro1, ro2, ro3;
 	Coordinate t1, t2, t3, t4;
@@ -676,6 +745,82 @@ RobotToTasks * forTest() {
 
 }
 
+/* 
+Function : buildMap
+initialization of maps 
+*/
+void buildMap() {
+	char data;
+
+	/* true map loading and setting */
+	FILE  * fp;
+	fopen_s(&fp, "hwall10.txt", "r");
+
+	int i = 0;
+	int j = 0;
+
+	while (fscanf_s(fp, "%c", &data) != EOF)
+	{
+		if (data == ' ')
+		{
+			j++;
+		}
+		else if (data == '\n')
+		{
+			i++;
+			j = 0;
+		}
+		else if (data != 13)
+		{
+			hWallMatrix[i][j] = data - 48;
+		}
+	}
+
+	fclose(fp);
+
+	fopen_s(&fp, "vwall10.txt", "r");
+	i = 0;
+	j = 0;
+	while (fscanf_s(fp, "%c", &data) != EOF)
+	{
+		if (data == ' ')
+		{
+			j++;
+		}
+		else if (data == '\n')
+		{
+			i++;
+			j = 0;
+		}
+		else if (data != 13)
+		{
+			vWallMatrix[i][j] = data - 48;
+		}
+	}
+	fclose(fp);
+
+
+	/* initialize recognized map */
+	for (int ii = 0; ii < MAP_SIZE; ii++)
+	{
+		for (int jj = 0; jj < MAP_SIZE; jj++)
+		{
+			if (jj < MAP_SIZE - 1)
+			{
+				recognizedHWall[ii][jj] = 0;
+
+			}
+		}
+		for (int jj = 0; jj < MAP_SIZE; jj++)
+		{
+			if (ii < MAP_SIZE - 1)
+			{
+				recognizedVWall[ii][jj] = 0;
+			}
+		}
+	}
+}
+
 
 /* MAIN */
 
@@ -684,67 +829,18 @@ int main()
 {
 	srand(time(NULL));
 
-	char data;
-
-	// map loading and generating
-	FILE  * fp;
-	fopen_s(&fp, "hwall10.txt", "r");
-
-	int i = 0;
-	int j = 0;
-
-	while(fscanf_s(fp, "%c", &data) != EOF)
-	{
-		if(data == ' ')
-		{
-			j++;
-		}
-		else if(data == '\n')
-		{
-			i++;
-			
-			j = 0;
-		}
-		else if(data != 13)
-		{
-			hWallMatrix[i][j] = data - 48;
-			
-		}
-	}
-
-	fclose(fp);
-
-	fopen_s(&fp, "vwall10.txt", "r");
-	
-	i = 0;
-	j = 0;
-
-	while(fscanf_s(fp, "%c", &data ) != EOF)
-	{
-		if(data == ' ')
-		{
-			j++;
-		}
-		else if(data == '\n')
-		{
-			i++;
-			j = 0;
-		}
-		else if(data != 13)
-		{
-			vWallMatrix[i][j] = data-48;
-		}
-	}
-	fclose(fp);
+	buildMap();
 
 	Robot robotList[NUM_ROBOT];
 
 	printf("print map\n\n");
+
+	/* set costs of maps */
 	for(int ii = 0; ii < MAP_SIZE; ii++)
 	{
 		for(int jj = 0; jj < MAP_SIZE; jj++)
 		{
-			terreinMatrix[ii][jj] = rand()%200;
+			terreinMatrix[ii][jj] = rand() % 200;
 		}
 	}
 
@@ -768,14 +864,16 @@ int main()
 			}
 		}
 	}
-		
-	//spawn tasks
+
+	/* spawn tasks */
 	Coordinate itemCoord[NUM_TASK];
 	for(int ii = 0; ii< NUM_TASK; ii ++)
 	{
 		itemCoord[ii].x = 11;
 		itemCoord[ii].y = 11;
 	}
+
+	/* print map information */
 	for(int ii = 0; ii < MAP_SIZE; ii++)
 	{
 		for(int jj = 0; jj < MAP_SIZE; jj++)
@@ -880,13 +978,14 @@ int main()
 	
 	int doneList[NUM_TASK] = {0,};
 
+	/* initiate robot location */
 	for(int ii = 0 ;ii < NUM_ROBOT; ii++)
 	{
 		same = 1;
 		while(same == 1)
 		{
-			newItem.x = rand()%MAP_SIZE;
-			newItem.y = rand()%MAP_SIZE;
+			newItem.x = rand() % MAP_SIZE;
+			newItem.y = rand() % MAP_SIZE;
 			same = 0;
 			
 			for(int jj = 0; jj < ii; jj++)
@@ -902,8 +1001,11 @@ int main()
 		robotList[ii].robotcoord.y = newItem.y;
 
 		printf("move robot %d to (%d, %d)\n", ii, newItem.x,newItem.y);
+
+		robotList[ii].recognizeWalls();
 	}
 
+	/* initiate task location */
 	for(int ii = 0; ii < NUM_TASK/2; ii++)
 	{
 		same = 1;
@@ -936,6 +1038,7 @@ int main()
 		printf("move item %d to (%d, %d)\n", ii, newItem.x,newItem.y);
 	}
 	
+	/* set costs of task */
 	int tempCost[2][NUM_TASK] = {0,};
 
 	for(int ii = 0; ii < NUM_TASK; ii++)
@@ -948,10 +1051,11 @@ int main()
 	{
 		for(int ii = 0; ii < NUM_TASK; ii++)
 		{
-			robotList[index].taskCost[ii] = tempCost[index%2][ii];
+			robotList[index].taskCost[ii] = tempCost[index % 2][ii];
 		}
 	}
 
+	/* print task cost information */
 	printf("\n");
 	printf("task cost\ntask\t");
 	
@@ -972,8 +1076,7 @@ int main()
 	}
 	printf("\n");
 
-	
-
+	/* scheduling */
 	RobotToTasks * test = forTest();
 	int * scheduled = scheduling(test, 3, 4);
 
@@ -983,17 +1086,6 @@ int main()
 		robotList[i].assignTask(scheduled[i], path, itemCoord);
 	}
 	
-	//currentPos.x = 1;
-
-	//asdff.push_back(currentPos);
-
-	//currentPos.y = 1;
-
-	//asdff.push_back(currentPos);
-
-	//robotList[0].assignTask(0, path, itemCoord);
-	
-
 	int taskProgress[NUM_ROBOT] = {0,};
 	int movingProgress[NUM_ROBOT] = {0,};
 
@@ -1006,17 +1098,18 @@ int main()
 	int task_produced = NUM_TASK/2;
 	int time_produced = TIME_MAX/2;
 
+	/* start */
 	while(time < TIME_MAX && exitCondition == 0)
 	{
+		/* new task generation */
 		if(time == time_produced )
 		{
-			time_produced += TIME_MAX/NUM_TASK;
+			time_produced += TIME_MAX / NUM_TASK;
 			same = 1;
 			while(same == 1)
 			{
-				newItem.x = rand()%MAP_SIZE;
-			
-				newItem.y = rand()%MAP_SIZE;
+				newItem.x = rand() % MAP_SIZE;
+				newItem.y = rand() % MAP_SIZE;
 			
 				same = 0;
 			
@@ -1043,11 +1136,11 @@ int main()
 
 			task_produced++;
 		}
-		
-		//simulate robot behavior
-		
+
+		/* simulate robot behavior */
 		for(int index = 0; index < NUM_ROBOT; index++)
 		{
+			/* MOVING state */
 			if(robotList[index].status == MOVING)
 			{
 				if(movingProgress[index] == 0)
@@ -1079,9 +1172,12 @@ int main()
 					{
 						reach[index] = 1;
 					}
+					robotList[index].energy -= robotList[index].getTravelCost();
+					robotList[index].recognizeWalls();
 				}
-				printf("robot %d is moving towards task %d\n", index, robotList[index].taskList[robotList[index].curr_task].taskId);
+				//printf("robot %d is moving towards task %d\n", index, robotList[index].taskList[robotList[index].curr_task].taskId);
 			}
+			/* WORKING state */
 			else if(robotList[index].status == WORKING)
 			{
 				if(taskProgress[index] == 0)
@@ -1104,6 +1200,7 @@ int main()
 					taskProgress[index] = 0;
 				}
 			}
+			/* IDLE state */
 			else if(robotList[index].status == IDLE)
 			{
 				printf("robot %d is idle\n", index);
@@ -1120,7 +1217,7 @@ int main()
 		time++;
 		//simulate robot behavior end
 
-		// end condition
+		/* end condition */
 		count = 0;
 		for(int ii = 0; ii < NUM_TASK; ii++)
 		{
@@ -1137,6 +1234,7 @@ int main()
 		
 	}
 
+	/* show result */
 	for(int index = 0; index < NUM_ROBOT; index++)
 	{
 		robotList[index].calcCost();
@@ -1151,7 +1249,6 @@ int main()
 	
 	}
 	printf("\n");
-
-	//print_result(robotList, 0);
+	getchar();
 }
 
