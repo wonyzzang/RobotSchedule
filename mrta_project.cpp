@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
-
+#include <string.h>
 #include <vector>
 
 #define MAP_SIZE 10
@@ -28,6 +28,29 @@ wall recognition 0 초기화, 모르는곳은 0, 벽이 있으면 1, 벽이 없으면 -1
 */
 int hwallSearch[MAP_SIZE - 1][MAP_SIZE] = { 0, };	
 int vwallSearch[MAP_SIZE][MAP_SIZE - 1] = { 0, };
+
+// 다익스트라 알고리즘
+unsigned int (*searchCost(Robot robot))[MAP_SIZE]
+{	
+	unsigned int costmap[MAP_SIZE][MAP_SIZE];
+	unsigned int travelCost[MAP_SIZE][MAP_SIZE];
+
+	memset(costmap, -1, sizeof(costmap));	// 오버플로우 최대값 초기화
+	memcpy(travelCost, robot.travelCost, sizeof(robot.travelCost));
+	// 로봇 좌표 기준설정
+	int x = robot.robotcoord.x;
+	int y = robot.robotcoord.y;
+
+	// 로봇 이동 코스트 맵
+
+
+
+	
+
+	return costmap; // 코스트 맵 리턴
+}
+
+
 
 class Node
 {
