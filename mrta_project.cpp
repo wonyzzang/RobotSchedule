@@ -23,34 +23,11 @@ int hWallMatrix[MAP_SIZE-1][MAP_SIZE];
 int vWallMatrix[MAP_SIZE][MAP_SIZE-1];
 int terreinMatrix[MAP_SIZE][MAP_SIZE];
 
-// 다익스트라 알고리즘
-unsigned int (*searchCost(Robot robot))[MAP_SIZE]
-{	
-	unsigned int costmap[MAP_SIZE][MAP_SIZE];
-	unsigned int travelCost[MAP_SIZE][MAP_SIZE];
-
-	memset(costmap, 100000, sizeof(costmap));	// 초기화
-	memcpy(travelCost, robot.travelCost, sizeof(robot.travelCost));
-	// 로봇 좌표 기준설정
-	int x = robot.robotcoord.x;
-	int y = robot.robotcoord.y;
-
-	//노드 정의
-	Node Nodemap[MAP_SIZE*MAP_SIZE];	
-	
-
-	return costmap; // 코스트 맵 리턴
-}
-
-
-
 
 class Node
 {
 public:
 	int nodeNum;
-
-	Coordinate pos;	//	좌표계 설정
 	unsigned int nodeCost;	// 코스트
 
 	Node *left = NULL;
@@ -60,15 +37,11 @@ public:
 
 	Node(int xx, int yy, int cost)
 	{
-		pos.x = xx;
-		pos.y = yy;
 		nodeCost = cost;
-		nodeNum = MAP_SIZE*pos.x + pos.y;
+		nodeNum = MAP_SIZE*xx + yy;
 	}
 	Node()
 	{
-		pos.x = -1;
-		pos.y = -1;
 		nodeCost = 100000;
 		nodeNum = -1;
 	}
