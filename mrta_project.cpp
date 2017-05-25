@@ -23,28 +23,20 @@ int hWallMatrix[MAP_SIZE-1][MAP_SIZE];
 int vWallMatrix[MAP_SIZE][MAP_SIZE-1];
 int terreinMatrix[MAP_SIZE][MAP_SIZE];
 
-/* 벽 감지 배열
-wall recognition 0 초기화, 모르는곳은 0, 벽이 있으면 1, 벽이 없으면 -1
-*/
-int hwallSearch[MAP_SIZE - 1][MAP_SIZE] = { 0, };	
-int vwallSearch[MAP_SIZE][MAP_SIZE - 1] = { 0, };
-
 // 다익스트라 알고리즘
 unsigned int (*searchCost(Robot robot))[MAP_SIZE]
 {	
 	unsigned int costmap[MAP_SIZE][MAP_SIZE];
 	unsigned int travelCost[MAP_SIZE][MAP_SIZE];
 
-	memset(costmap, -1, sizeof(costmap));	// 오버플로우 최대값 초기화
+	memset(costmap, 100000, sizeof(costmap));	// 초기화
 	memcpy(travelCost, robot.travelCost, sizeof(robot.travelCost));
 	// 로봇 좌표 기준설정
 	int x = robot.robotcoord.x;
 	int y = robot.robotcoord.y;
 
-	// 로봇 이동 코스트 맵
-
-
-
+	//노드 정의
+	Node Nodemap[MAP_SIZE*MAP_SIZE];	
 	
 
 	return costmap; // 코스트 맵 리턴
@@ -52,29 +44,33 @@ unsigned int (*searchCost(Robot robot))[MAP_SIZE]
 
 
 
+
 class Node
 {
 public:
+	int nodeNum;
 
 	Coordinate pos;	//	좌표계 설정
 	unsigned int nodeCost;	// 코스트
 
-	Node *left;
-	Node *right;
-	Node *up;
-	Node *down;
+	Node *left = NULL;
+	Node *right = NULL;
+	Node *up = NULL;
+	Node *down = NULL;
 
 	Node(int xx, int yy, int cost)
 	{
 		pos.x = xx;
 		pos.y = yy;
 		nodeCost = cost;
+		nodeNum = MAP_SIZE*pos.x + pos.y;
 	}
 	Node()
 	{
-		pos.x = 0;
-		pos.y = 0;
-		nodeCost = 0;
+		pos.x = -1;
+		pos.y = -1;
+		nodeCost = 100000;
+		nodeNum = -1;
 	}
 };
 
@@ -126,6 +122,7 @@ public:
 	int travelCost[MAP_SIZE][MAP_SIZE]; //travel cost of block Coordinate
 	int taskCost[NUM_TASK]; // cost of a task performed by this robot
 	Task taskList[NUM_TASK];// list of tasks assgined to this robot
+	Node Nodemap[MAP_SIZE*MAP_SIZE];
 
 	int totalCost;// total energy consumed
 	int totalBlocks; // total number of blocks traveled
@@ -150,8 +147,12 @@ public:
 	Coordinate getCurrentPosition();
 
 	void updatePostion();
+	void setNodeMap(Node Nodemap[]);
+	void searchDijkstra();
 
 	bool atTask();
+
+
 };
 
 Robot::Robot() {
@@ -313,6 +314,75 @@ void Robot::updatePostion()
 	{
 		pathIndex = 0;
 	}
+}
+
+void Robot::setNodeMap(Node Nodemap[])
+{
+	for (int i = 0; i < MAP_SIZE; i++)
+	{
+		for (int j = 0; j < MAP_SIZE; j++)
+		{
+			// Nodempap 배열에 노드 연결
+			Nodemap[MAP_SIZE*i + j] = Node(i, j, travelCost[i][j]);
+			// 노드간 관계 연결
+			if (i == 0) {
+				if (j == 0) {
+					// 왼쪽 위
+					Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*(i + 1) + j];
+					Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
+				}
+				else if (j == MAP_SIZE - 1) {
+					// 오른쪽 위
+					Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*(i + 1) + j];
+					Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
+				}
+				else {
+					Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*(i + 1) + j];
+					Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
+					Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
+				}
+			}
+			else if (i == MAP_SIZE - 1) {
+				if (j == 0) {
+					// 왼쪽 아래
+					Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
+					Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
+				}
+				else if (j == MAP_SIZE - 1) {
+					// 오른쪽 아래
+					Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
+					Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
+				}
+				else {
+					Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
+					Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
+					Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
+				}
+			}
+			else if (j == 0) {
+				Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
+				Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*i + (j - 1)];
+				Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
+			}
+			else if (j == MAP_SIZE - 1) {
+				Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
+				Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*i + (j - 1)];
+				Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j + 1)];
+			}
+			else {
+				Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i - 1) + j];
+				Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*(i + 1) + j];
+				Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
+				Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
+			}
+		}
+	}
+
+}
+
+void Robot::searchDijkstra()
+{
+
 }
 
 
