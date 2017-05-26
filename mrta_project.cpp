@@ -8,7 +8,7 @@
 #include <list>
 
 using namespace std;
-#define INF 0x3f3f3f3f
+#define INF 10000
 #define MAP_SIZE 10
 #define NUM_ROBOT 4
 #define NUM_TASK 16
@@ -26,8 +26,8 @@ using namespace std;
 
 typedef pair<int, int> iPair;
 
-int hWallMatrix[MAP_SIZE-1][MAP_SIZE];
-int vWallMatrix[MAP_SIZE][MAP_SIZE-1];
+int hWallMatrix[MAP_SIZE - 1][MAP_SIZE];
+int vWallMatrix[MAP_SIZE][MAP_SIZE - 1];
 int terreinMatrix[MAP_SIZE][MAP_SIZE];
 
 class Node
@@ -35,11 +35,7 @@ class Node
 public:
 	int nodeNum;
 	unsigned int nodeCost;	// 코스트
-
-	Node *left = NULL;
-	Node *right = NULL;
-	Node *up = NULL;
-	Node *down = NULL;
+	Node *prev = NULL;
 
 	Node(int xx, int yy, int cost)
 	{
@@ -110,10 +106,10 @@ public:
 		Graph(int V);  // Constructor
 
 					   // function to add an edge to graph
-		void addEdge(int u, int v, int w);
+		void addEdge(int u, int v, int w1, int w2);
 		void deleteEdge(int u, int v, int w);
 		// prints shortest path from s
-		void shortestPath(int s);
+		void shortestPath(int s, Robot *robot);
 	};
 
 	Coordinate robotcoord;
@@ -123,9 +119,10 @@ public:
 	Task taskList[NUM_TASK];// list of tasks assgined to this robot
 
 	Node Nodemap[MAP_SIZE*MAP_SIZE];
-	void setNodeMap(Node Nodemap[]);
-	void setPath(Node Nodemap[], Graph robotgraph);
+	void setNodemap();
 
+	Graph robotgraph;
+	void setCostEdge();
 
 	int totalCost;// total energy consumed
 	int totalBlocks; // total number of blocks traveled
@@ -156,6 +153,8 @@ public:
 
 
 
+
+
 };
 
 Robot::Robot() {
@@ -163,7 +162,7 @@ Robot::Robot() {
 	robotcoord.y = 0;
 
 	Graph robotGraph = Graph(MAP_SIZE*MAP_SIZE);
-
+	
 	num_task = 0;
 
 	energy = MAX_ENERGY;
@@ -307,6 +306,92 @@ bool Robot::atTask()
 	}
 }
 
+void Robot::setNodemap()
+{
+	for (int ii = 0; ii < MAP_SIZE; ii++)
+	{
+		for (int jj = 0; jj < MAP_SIZE; jj++)
+		{
+			Nodemap[MAP_SIZE*ii + jj].nodeNum = MAP_SIZE*ii + jj;
+			Nodemap[MAP_SIZE*ii + jj].nodeCost = travelCost[ii][jj];
+		}
+	}
+}
+
+void Robot::setCostEdge()
+{
+	for (int ii = 0; ii < MAP_SIZE; ii++) 
+	{
+		for (int jj = 0; jj < MAP_SIZE; jj++) 
+		{
+			if (ii == 0) {
+				if (jj == 0) {
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj + 1, travelCost[ii][jj+1], travelCost[ii][jj]);	//right
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii+1) + jj, travelCost[ii+1][jj], travelCost[ii][jj]);	//down
+					printf("type 1 ");
+				}
+				else if (jj == 9) {
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj - 1, travelCost[ii][jj - 1], travelCost[ii][jj]);	//left
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii + 1) + jj, travelCost[ii + 1][jj], travelCost[ii][jj]);//down
+					printf("type 2 ");
+				}
+				else{
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj + 1, travelCost[ii][jj + 1], travelCost[ii][jj]);	//right
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj - 1, travelCost[ii][jj - 1], travelCost[ii][jj]);	//left
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii + 1) + jj, travelCost[ii + 1][jj], travelCost[ii][jj]);//down
+					printf("type 3 ");
+				}
+			}
+			else if (ii == 9)
+			{
+				if (jj == 0)
+				{
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii - 1) + jj, travelCost[ii - 1][jj], travelCost[ii][jj]);//up
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj + 1, travelCost[ii][jj + 1], travelCost[ii][jj]);	//right
+					printf("type 4 ");
+				}
+				else if (jj == 9)
+				{
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii - 1) + jj, travelCost[ii - 1][jj], travelCost[ii][jj]);//up
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj - 1, travelCost[ii][jj - 1], travelCost[ii][jj]);	//left
+					printf("type 5 ");
+
+				}
+				else
+				{
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii - 1) + jj, travelCost[ii - 1][jj], travelCost[ii][jj]);//up
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj + 1, travelCost[ii][jj + 1], travelCost[ii][jj]);	//right
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj - 1, travelCost[ii][jj - 1], travelCost[ii][jj]);	//left
+					printf("type 6 ");
+				}
+			}
+			else
+			{
+				if (jj == 0) {
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj + 1, travelCost[ii][jj + 1], travelCost[ii][jj]);	//right
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii - 1) + jj, travelCost[ii - 1][jj], travelCost[ii][jj]);//up
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii + 1) + jj, travelCost[ii + 1][jj], travelCost[ii][jj]);//down
+					printf("type 7 ");
+				}
+				else if (jj = 9) {
+
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj - 1, travelCost[ii][jj - 1], travelCost[ii][jj]);	//left
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii - 1) + jj, travelCost[ii - 1][jj], travelCost[ii][jj]);//up
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii + 1) + jj, travelCost[ii + 1][jj], travelCost[ii][jj]);//down
+					printf("type 8 ");
+				}
+				else {
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj - 1, travelCost[ii][jj - 1], travelCost[ii][jj]);	//left
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj + 1, travelCost[ii][jj + 1], travelCost[ii][jj]);	//right
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii - 1) + jj, travelCost[ii - 1][jj], travelCost[ii][jj]);//up
+					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii + 1) + jj, travelCost[ii + 1][jj], travelCost[ii][jj]);//down
+					printf("type 9 ");
+				}
+			}
+		}
+	}
+}
+
 void Robot::updatePostion()
 {
 	pathIndex++;
@@ -322,95 +407,6 @@ void Robot::updatePostion()
 	}
 }
 
-void Robot::setNodeMap(Node Nodemap[])
-{
-	for (int i = 0; i < MAP_SIZE; i++)
-	{
-		for (int j = 0; j < MAP_SIZE; j++)
-		{
-			// Nodempap 배열에 노드 연결
-			Nodemap[MAP_SIZE*i + j] = Node(i, j, travelCost[i][j]);
-			// 노드간 관계 연결
-			if (i == 0) {
-				if (j == 0) {
-					// 왼쪽 위
-					Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*(i + 1) + j];
-					Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
-				}
-				else if (j == MAP_SIZE - 1) {
-					// 오른쪽 위
-					Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*(i + 1) + j];
-					Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
-				}
-				else {
-					Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*(i + 1) + j];
-					Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
-					Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
-				}
-			}
-			else if (i == MAP_SIZE - 1) {
-				if (j == 0) {
-					// 왼쪽 아래
-					Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
-					Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
-				}
-				else if (j == MAP_SIZE - 1) {
-					// 오른쪽 아래
-					Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
-					Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
-				}
-				else {
-					Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
-					Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
-					Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
-				}
-			}
-			else if (j == 0) {
-				Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
-				Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*i + (j - 1)];
-				Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
-			}
-			else if (j == MAP_SIZE - 1) {
-				Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
-				Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*i + (j - 1)];
-				Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j + 1)];
-			}
-			else {
-				Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i - 1) + j];
-				Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*(i + 1) + j];
-				Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
-				Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
-			}
-		}
-	}
-
-}
-
-void Robot::setPath(Node Nodemap[], Graph robotgraph)
-{
-	for (int i = 0; i < robotgraph.V; i++)
-	{
-		Node CurrentNode = Nodemap[i];
-		if (CurrentNode.up != NULL) 
-		{
-			robotgraph.addEdge(CurrentNode.nodeNum, CurrentNode.up->nodeNum, CurrentNode.up->nodeCost);
-		}
-		if (CurrentNode.down != NULL)
-		{
-			robotgraph.addEdge(CurrentNode.nodeNum, CurrentNode.down->nodeNum, CurrentNode.down->nodeCost);
-		}
-		if (CurrentNode.left != NULL)
-		{
-			robotgraph.addEdge(CurrentNode.nodeNum, CurrentNode.left->nodeNum, CurrentNode.left->nodeCost);
-		}
-		if (CurrentNode.right != NULL)
-		{
-			robotgraph.addEdge(CurrentNode.nodeNum, CurrentNode.right->nodeNum, CurrentNode.right->nodeCost);
-		}
-	}
-}
-
-
 // Allocates memory for adjacency list
 Robot::Graph::Graph()
 {
@@ -423,21 +419,19 @@ Robot::Graph::Graph(int V)
 	adj = new list<iPair>[V];
 }
 
-void Robot::Graph::addEdge(int u, int v, int w)
+void Robot::Graph::addEdge(int u, int v, int w1, int w2)
 {
-	adj[u].push_back(make_pair(v, w));
-	adj[v].push_back(make_pair(u, w));
+	adj[u].push_back(make_pair(v, w1));
 }
 
 void Robot::Graph::deleteEdge(int u, int v, int w)
 {
 	adj[u].remove(make_pair(v, w));
-	adj[v].remove(make_pair(u, w));
 }
 
 
 // Prints shortest paths from src to all other vertices
-void Robot::Graph::shortestPath(int src)
+void Robot::Graph::shortestPath(int src, Robot *robot)
 {
 	priority_queue< iPair, vector <iPair>, greater<iPair> > pq;
 
@@ -460,6 +454,7 @@ void Robot::Graph::shortestPath(int src)
 		// has to be done this way to keep the vertices
 		// sorted distance (distance must be first item
 		// in pair)
+		// u = from, v = to
 		int u = pq.top().second;
 		pq.pop();
 
@@ -477,6 +472,8 @@ void Robot::Graph::shortestPath(int src)
 			{
 				// Updating distance of v
 				dist[v] = dist[u] + weight;
+				(*robot).Nodemap[v].prev = &(*robot).Nodemap[u];
+				printf("%d %d\n", (*robot).Nodemap[v].nodeNum, (*robot).Nodemap[v].prev->nodeNum);
 				pq.push(make_pair(dist[v], v));
 			}
 		}
@@ -485,6 +482,19 @@ void Robot::Graph::shortestPath(int src)
 	printf("Vertex   Distance from Source\n");
 	for (int i = 0; i < V; ++i)
 		printf("%d \t\t %d\n", i, dist[i]);
+	Node copymap[MAP_SIZE*MAP_SIZE];
+	memcpy(&copymap, &(*robot).Nodemap, sizeof((*robot).Nodemap));
+	//Node point = *copymap;
+	for (int i = 0; i < V; i++) 
+	{
+		Node point = copymap[i];
+		printf("%d : ", copymap[i].nodeNum);
+		while (point.prev != NULL) {
+			printf("%d ", point.prev->nodeNum);
+			point = *point.prev;
+		}
+		printf("\n");
+	}
 }
 
 
@@ -889,46 +899,46 @@ int main()
 	int i = 0;
 	int j = 0;
 
-	while(fscanf_s(fp, "%c", &data, sizeof(data)) != EOF)
+	while (fscanf_s(fp, "%c", &data, sizeof(data)) != EOF)
 	{
-		if(data == ' ')
+		if (data == ' ')
 		{
 			j++;
 		}
-		else if(data == '\n')
+		else if (data == '\n')
 		{
 			i++;
-			
+
 			j = 0;
 		}
-		else if(data != 13)
+		else if (data != 13)
 		{
 			hWallMatrix[i][j] = data - 48;
-			
+
 		}
 	}
 
 	fclose(fp);
 
 	fopen_s(&fp, "vwall10.txt", "r");
-	
+
 	i = 0;
 	j = 0;
 
-	while(fscanf_s(fp, "%c", &data, sizeof(data) ) != EOF)
+	while (fscanf_s(fp, "%c", &data, sizeof(data)) != EOF)
 	{
-		if(data == ' ')
+		if (data == ' ')
 		{
 			j++;
 		}
-		else if(data == '\n')
+		else if (data == '\n')
 		{
 			i++;
 			j = 0;
 		}
-		else if(data != 13)
+		else if (data != 13)
 		{
-			vWallMatrix[i][j] = data-48;
+			vWallMatrix[i][j] = data - 48;
 		}
 	}
 	fclose(fp);
@@ -936,24 +946,24 @@ int main()
 	Robot robotList[NUM_ROBOT];
 
 	printf("print map\n\n");
-	for(int ii = 0; ii < MAP_SIZE; ii++)
+	for (int ii = 0; ii < MAP_SIZE; ii++)
 	{
-		for(int jj = 0; jj < MAP_SIZE; jj++)
+		for (int jj = 0; jj < MAP_SIZE; jj++)
 		{
-			terreinMatrix[ii][jj] = rand()%200;
+			terreinMatrix[ii][jj] = rand() % 200;
 		}
 	}
 
 	int asdf = 0;
 	asdf = rand() % 40 + 50;
 
-	for(int index = 0; index < NUM_ROBOT; index++)
+	for (int index = 0; index < NUM_ROBOT; index++)
 	{
-		for(int ii = 0; ii < MAP_SIZE; ii++)
+		for (int ii = 0; ii < MAP_SIZE; ii++)
 		{
-			for(int jj = 0; jj < MAP_SIZE; jj++)
+			for (int jj = 0; jj < MAP_SIZE; jj++)
 			{
-				if(index %2 == 0)
+				if (index % 2 == 0)
 				{
 					robotList[index].travelCost[ii][jj] = terreinMatrix[ii][jj];
 				}
@@ -964,23 +974,23 @@ int main()
 			}
 		}
 	}
-		
+
 	//spawn tasks
 	Coordinate itemCoord[NUM_TASK];
-	for(int ii = 0; ii< NUM_TASK; ii ++)
+	for (int ii = 0; ii< NUM_TASK; ii++)
 	{
 		itemCoord[ii].x = 11;
 		itemCoord[ii].y = 11;
 	}
-	for(int ii = 0; ii < MAP_SIZE; ii++)
+	for (int ii = 0; ii < MAP_SIZE; ii++)
 	{
-		for(int jj = 0; jj < MAP_SIZE; jj++)
+		for (int jj = 0; jj < MAP_SIZE; jj++)
 		{
 			printf("%4d ", robotList[0].travelCost[ii][jj]);
 			//fprintf(fp, "%4d ", robotList[0].travelCost[ii][jj]);
-			if( jj < MAP_SIZE-1)
+			if (jj < MAP_SIZE - 1)
 			{
-				if(vWallMatrix[ii][jj] == 1)
+				if (vWallMatrix[ii][jj] == 1)
 				{
 					printf("| ");
 					//fprintf(fp, "| ");
@@ -994,21 +1004,21 @@ int main()
 		}
 		printf("\n");
 		//fprintf(fp, "\n");
-		for(int jj = 0; jj < MAP_SIZE; jj++)
+		for (int jj = 0; jj < MAP_SIZE; jj++)
 		{
-			if(ii < MAP_SIZE-1 )
+			if (ii < MAP_SIZE - 1)
 			{
-				if(hWallMatrix[ii][jj] == 1)
+				if (hWallMatrix[ii][jj] == 1)
 				{
-					printf("%4s ","---");
+					printf("%4s ", "---");
 					//fprintf(fp, "%4s ","---");
 				}
 				else
 				{
-					printf("%4c ",' ');
+					printf("%4c ", ' ');
 					//fprintf(fp, "%4c ",' ');
 				}
-				if(jj < MAP_SIZE-1 )
+				if (jj < MAP_SIZE - 1)
 				{
 					printf("o ");
 					//fprintf(fp, "o ");
@@ -1016,21 +1026,21 @@ int main()
 			}
 		}
 		printf("\n");
-	//	fprintf(fp, "\n");
+		//	fprintf(fp, "\n");
 	}
 	printf("\n\n");
 	//fprintf(fp,"\n");
 
-	for(int ii = 0; ii < MAP_SIZE; ii++)
+	for (int ii = 0; ii < MAP_SIZE; ii++)
 	{
-		for(int jj = 0; jj < MAP_SIZE; jj++)
+		for (int jj = 0; jj < MAP_SIZE; jj++)
 		{
-			
+
 			printf("%4d ", robotList[1].travelCost[ii][jj]);
 			//fprintf(fp, "%4d ", robotList[0].travelCost[ii][jj]);
-			if( jj < MAP_SIZE-1)
+			if (jj < MAP_SIZE - 1)
 			{
-				if(vWallMatrix[ii][jj] == 1)
+				if (vWallMatrix[ii][jj] == 1)
 				{
 					printf("| ");
 					//fprintf(fp, "| ");
@@ -1044,21 +1054,21 @@ int main()
 		}
 		printf("\n");
 		//fprintf(fp, "\n");
-		for(int jj = 0; jj < MAP_SIZE; jj++)
+		for (int jj = 0; jj < MAP_SIZE; jj++)
 		{
-			if(ii < MAP_SIZE-1 )
+			if (ii < MAP_SIZE - 1)
 			{
-				if(hWallMatrix[ii][jj] == 1)
+				if (hWallMatrix[ii][jj] == 1)
 				{
-					printf("%4s ","---");
+					printf("%4s ", "---");
 					//fprintf(fp, "%4s ","---");
 				}
 				else
 				{
-					printf("%4c ",' ');
+					printf("%4c ", ' ');
 					//fprintf(fp, "%4c ",' ');
 				}
-				if(jj < MAP_SIZE-1 )
+				if (jj < MAP_SIZE - 1)
 				{
 					printf("o ");
 					//fprintf(fp, "o ");
@@ -1066,28 +1076,28 @@ int main()
 			}
 		}
 		printf("\n");
-	//	fprintf(fp, "\n");
+		//	fprintf(fp, "\n");
 	}
 	printf("\n");
 
 	int same;
 
 	Coordinate newItem;
-	
-	int doneList[NUM_TASK] = {0,};
 
-	for(int ii = 0 ;ii < NUM_ROBOT; ii++)
+	int doneList[NUM_TASK] = { 0, };
+
+	for (int ii = 0; ii < NUM_ROBOT; ii++)
 	{
 		same = 1;
-		while(same == 1)
+		while (same == 1)
 		{
-			newItem.x = rand()%MAP_SIZE;
-			newItem.y = rand()%MAP_SIZE;
+			newItem.x = rand() % MAP_SIZE;
+			newItem.y = rand() % MAP_SIZE;
 			same = 0;
-			
-			for(int jj = 0; jj < ii; jj++)
+
+			for (int jj = 0; jj < ii; jj++)
 			{
-				if(newItem.x == robotList[jj].robotcoord.x && newItem.y == robotList[jj].robotcoord.y)
+				if (newItem.x == robotList[jj].robotcoord.x && newItem.y == robotList[jj].robotcoord.y)
 				{
 					same = 1;
 				}
@@ -1097,78 +1107,80 @@ int main()
 		robotList[ii].robotcoord.x = newItem.x;
 		robotList[ii].robotcoord.y = newItem.y;
 
-		printf("move robot %d to (%d, %d)\n", ii, newItem.x,newItem.y);
+		printf("move robot %d to (%d, %d)\n", ii, newItem.x, newItem.y);
 	}
 
-	for(int ii = 0; ii < NUM_TASK/2; ii++)
+	for (int ii = 0; ii < NUM_TASK / 2; ii++)
 	{
 		same = 1;
-		while(same == 1)
+		while (same == 1)
 		{
 			newItem.x = rand() % MAP_SIZE;
 			newItem.y = rand() % MAP_SIZE;
 			same = 0;
-			
-			for(int jj = 0; jj < NUM_ROBOT; jj++)
+
+			for (int jj = 0; jj < NUM_ROBOT; jj++)
 			{
-				if(newItem.x == robotList[jj].robotcoord.x && newItem.y == robotList[jj].robotcoord.y)
+				if (newItem.x == robotList[jj].robotcoord.x && newItem.y == robotList[jj].robotcoord.y)
 				{
 					same = 1;
 				}
 			}
 
-			for(int jj = 0; jj < ii; jj++)
+			for (int jj = 0; jj < ii; jj++)
 			{
-				if(newItem.x == itemCoord[jj].x && newItem.y == itemCoord[jj].y)
+				if (newItem.x == itemCoord[jj].x && newItem.y == itemCoord[jj].y)
 				{
 					same = 1;
-				}	
+				}
 			}
 		}
 
 		itemCoord[ii].x = newItem.x;
 		itemCoord[ii].y = newItem.y;
 
-		printf("move item %d to (%d, %d)\n", ii, newItem.x,newItem.y);
+		printf("move item %d to (%d, %d)\n", ii, newItem.x, newItem.y);
 	}
-	
-	int tempCost[2][NUM_TASK] = {0,};
 
-	for(int ii = 0; ii < NUM_TASK; ii++)
+	int tempCost[2][NUM_TASK] = { 0, };
+
+	for (int ii = 0; ii < NUM_TASK; ii++)
 	{
 		tempCost[0][ii] = rand() % 200;
 		tempCost[1][ii] = rand() % 280;
 	}
 
-	for(int index = 0; index < NUM_ROBOT; index++)
+	for (int index = 0; index < NUM_ROBOT; index++)
 	{
-		for(int ii = 0; ii < NUM_TASK; ii++)
+		for (int ii = 0; ii < NUM_TASK; ii++)
 		{
-			robotList[index].taskCost[ii] = tempCost[index%2][ii];
+			robotList[index].taskCost[ii] = tempCost[index % 2][ii];
 		}
 	}
 
 	printf("\n");
 	printf("task cost\ntask\t");
-	
-	for(int ii = 0; ii < NUM_TASK; ii++)
+
+	for (int ii = 0; ii < NUM_TASK; ii++)
 	{
 		printf("%d\t", ii);
 	}
 	printf("\n");
 
-	for(int index = 0; index < NUM_ROBOT; index++)
+	for (int index = 0; index < NUM_ROBOT; index++)
 	{
 		printf("r%d :\t", index);
-		for(int ii = 0; ii < NUM_TASK; ii++)
+		for (int ii = 0; ii < NUM_TASK; ii++)
 		{
-			printf("%d\t",robotList[index].taskCost[ii]);
+			printf("%d\t", robotList[index].taskCost[ii]);
 		}
 		printf("\n");
 	}
 	printf("\n");
+	robotList[0].setNodemap();
+	robotList[0].setCostEdge();
+	robotList[0].robotgraph.shortestPath(0, &robotList[0]);
 
-	
 
 	RobotToTasks * test = forTest();
 	int * scheduled = scheduling(test, 3, 4);
@@ -1178,7 +1190,7 @@ int main()
 		std::vector <Coordinate> path = pathGeneration(robotList[i].robotcoord, itemCoord[taskID]);
 		robotList[i].assignTask(scheduled[i], path, itemCoord);
 	}
-	
+
 	//currentPos.x = 1;
 
 	//asdff.push_back(currentPos);
@@ -1188,69 +1200,69 @@ int main()
 	//asdff.push_back(currentPos);
 
 	//robotList[0].assignTask(0, path, itemCoord);
-	
 
-	int taskProgress[NUM_ROBOT] = {0,};
-	int movingProgress[NUM_ROBOT] = {0,};
 
-	int reach[NUM_ROBOT] = {0,};
+	int taskProgress[NUM_ROBOT] = { 0, };
+	int movingProgress[NUM_ROBOT] = { 0, };
+
+	int reach[NUM_ROBOT] = { 0, };
 
 	int exitCondition = 0;
 	int count = 0;
 	int time = 0;
 
-	int task_produced = NUM_TASK/2;
-	int time_produced = TIME_MAX/2;
+	int task_produced = NUM_TASK / 2;
+	int time_produced = TIME_MAX / 2;
 
-	while(time < TIME_MAX && exitCondition == 0)
+	while (time < TIME_MAX && exitCondition == 0)
 	{
-		if(time == time_produced )
+		if (time == time_produced)
 		{
-			time_produced += TIME_MAX/NUM_TASK;
+			time_produced += TIME_MAX / NUM_TASK;
 			same = 1;
-			while(same == 1)
+			while (same == 1)
 			{
-				newItem.x = rand()%MAP_SIZE;
-			
-				newItem.y = rand()%MAP_SIZE;
-			
+				newItem.x = rand() % MAP_SIZE;
+
+				newItem.y = rand() % MAP_SIZE;
+
 				same = 0;
-			
-				for(int jj = 0; jj < NUM_ROBOT; jj++)
+
+				for (int jj = 0; jj < NUM_ROBOT; jj++)
 				{
-					if(newItem.x == robotList[jj].robotcoord.x && newItem.y == robotList[jj].robotcoord.y)
+					if (newItem.x == robotList[jj].robotcoord.x && newItem.y == robotList[jj].robotcoord.y)
 					{
 						same = 1;
 					}
 				}
-				for(int jj = 0; jj < task_produced; jj++)
+				for (int jj = 0; jj < task_produced; jj++)
 				{
-					if(newItem.x == itemCoord[jj].x && newItem.y == itemCoord[jj].y)
+					if (newItem.x == itemCoord[jj].x && newItem.y == itemCoord[jj].y)
 					{
 						same = 1;
-					}	
+					}
 				}
 			}
 
 			itemCoord[task_produced].x = newItem.x;
 			itemCoord[task_produced].y = newItem.y;
 
-			printf("move item %d to (%d, %d)\n", task_produced, newItem.x,newItem.y);
+			printf("move item %d to (%d, %d)\n", task_produced, newItem.x, newItem.y);
 
 			task_produced++;
 		}
-		
+
 		//simulate robot behavior
-		
-		for(int index = 0; index < NUM_ROBOT; index++)
+
+		for (int index = 0; index < NUM_ROBOT; index++)
 		{
-			if(robotList[index].status == MOVING)
+			if (robotList[index].status == MOVING)
 			{
-				if(movingProgress[index] == 0)
+				if (movingProgress[index] == 0)
 				{
 					movingProgress[index] += robotList[index].getTravelCost();
 				}
-				if(movingProgress[index] > 0)
+				if (movingProgress[index] > 0)
 				{
 					//robotList[index].energy -= robotList[index].getTravelCost();
 					//movingProgress[index] -= robotList[index].getTravelCost();
@@ -1261,36 +1273,36 @@ int main()
 					robotList[index].energy -= robotList[index].getTravelCost();
 				}
 
-				if(reach[index] == 1)
+				if (reach[index] == 1)
 				{
 					robotList[index].status = WORKING;
 					robotList[index].pathIndex = 0;
 					movingProgress[index] = 0;
 					reach[index] = 0;
 				}
-				else if(movingProgress[index] <= 0)
+				else if (movingProgress[index] <= 0)
 				{
 					robotList[index].updatePostion();
-					if(robotList[index].atTask()== true)
+					if (robotList[index].atTask() == true)
 					{
 						reach[index] = 1;
 					}
 				}
 				printf("robot %d is moving towards task %d\n", index, robotList[index].taskList[robotList[index].curr_task].taskId);
 			}
-			else if(robotList[index].status == WORKING)
+			else if (robotList[index].status == WORKING)
 			{
-				if(taskProgress[index] == 0)
+				if (taskProgress[index] == 0)
 				{
 					taskProgress[index] += robotList[index].getTaskCost();
 				}
-				
-				if(taskProgress[index] > 0)
+
+				if (taskProgress[index] > 0)
 				{
 					taskProgress[index] -= 1;
 					printf("robot %d is working on task %d\n", index, robotList[index].taskList[robotList[index].curr_task].taskId);
 				}
-				else if(taskProgress[index] <= 0)
+				else if (taskProgress[index] <= 0)
 				{
 					printf("robot %d finished task %d\n", index, robotList[index].taskList[robotList[index].curr_task].taskId);
 					robotList[index].energy -= robotList[index].getTaskCost();
@@ -1300,13 +1312,13 @@ int main()
 					taskProgress[index] = 0;
 				}
 			}
-			else if(robotList[index].status == IDLE)
+			else if (robotList[index].status == IDLE)
 			{
 				printf("robot %d is idle\n", index);
 
-				if(robotList[index].curr_task < NUM_TASK)
+				if (robotList[index].curr_task < NUM_TASK)
 				{
-					if(robotList[index].taskList[robotList[index].curr_task].taskId > -1)
+					if (robotList[index].taskList[robotList[index].curr_task].taskId > -1)
 					{
 						robotList[index].status = MOVING;
 					}
@@ -1318,22 +1330,22 @@ int main()
 
 		// end condition
 		count = 0;
-		for(int ii = 0; ii < NUM_TASK; ii++)
+		for (int ii = 0; ii < NUM_TASK; ii++)
 		{
-			if(doneList[ii] == 1)
+			if (doneList[ii] == 1)
 			{
 				count++;
 			}
 		}
-		if(count == NUM_TASK)
+		if (count == NUM_TASK)
 		{
 			printf("finished task at time %d\n", time);
 			exitCondition = 1;
 		}
-		
+
 	}
 
-	for(int index = 0; index < NUM_ROBOT; index++)
+	for (int index = 0; index < NUM_ROBOT; index++)
 	{
 		robotList[index].calcCost();
 
@@ -1341,13 +1353,15 @@ int main()
 	}
 
 	printf("done list : ");
-	for(int ii = 0; ii < NUM_TASK; ii++)
+	for (int ii = 0; ii < NUM_TASK; ii++)
 	{
 		printf("%d ", doneList[ii]);
-	
+
 	}
 	printf("\n");
 
 	//print_result(robotList, 0);
+
+	system("pause");
 }
 
