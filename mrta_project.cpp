@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
-
+#include <string.h>
 #include <vector>
 
 #define MAP_SIZE 10
@@ -23,12 +23,41 @@ int hWallMatrix[MAP_SIZE-1][MAP_SIZE];
 int vWallMatrix[MAP_SIZE][MAP_SIZE-1];
 int terreinMatrix[MAP_SIZE][MAP_SIZE];
 
+<<<<<<< HEAD
 int hWallSearch[MAP_SIZE - 1][MAP_SIZE] = { 0, };
 int vWallSearch[MAP_SIZE][MAP_SIZE - 1] = { 0, };
 
 /* 
 Class : Coordinate 
 */
+=======
+
+class Node
+{
+public:
+	int nodeNum;
+	unsigned int nodeCost;	// 코스트
+
+	Node *left = NULL;
+	Node *right = NULL;
+	Node *up = NULL;
+	Node *down = NULL;
+
+	Node(int xx, int yy, int cost)
+	{
+		nodeCost = cost;
+		nodeNum = MAP_SIZE*xx + yy;
+	}
+	Node()
+	{
+		nodeCost = 100000;
+		nodeNum = -1;
+	}
+};
+
+
+/* Class : Coordinate */
+>>>>>>> origin/qbranch
 class Coordinate
 {
 public:
@@ -79,6 +108,7 @@ public:
 	int travelCost[MAP_SIZE][MAP_SIZE]; //travel cost of block Coordinate
 	int taskCost[NUM_TASK]; // cost of a task performed by this robot
 	Task taskList[NUM_TASK];// list of tasks assgined to this robot
+	Node Nodemap[MAP_SIZE*MAP_SIZE];
 
 	int totalCost;// total energy consumed
 	int totalBlocks; // total number of blocks traveled
@@ -103,9 +133,16 @@ public:
 	Coordinate getCurrentPosition();
 
 	void updatePostion();
+<<<<<<< HEAD
 	void recognizeWalls();
+=======
+	void setNodeMap(Node Nodemap[]);
+	void searchDijkstra();
+>>>>>>> origin/qbranch
 
 	bool atTask();
+
+
 };
 
 Robot::Robot() {
@@ -267,6 +304,7 @@ void Robot::updatePostion()
 	}
 }
 
+<<<<<<< HEAD
 /* 
 Function : recognizeWalls
 recognize walls around the robot 
@@ -332,6 +370,77 @@ public:
 	Node *up;
 	Node *down;
 };
+=======
+void Robot::setNodeMap(Node Nodemap[])
+{
+	for (int i = 0; i < MAP_SIZE; i++)
+	{
+		for (int j = 0; j < MAP_SIZE; j++)
+		{
+			// Nodempap 배열에 노드 연결
+			Nodemap[MAP_SIZE*i + j] = Node(i, j, travelCost[i][j]);
+			// 노드간 관계 연결
+			if (i == 0) {
+				if (j == 0) {
+					// 왼쪽 위
+					Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*(i + 1) + j];
+					Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
+				}
+				else if (j == MAP_SIZE - 1) {
+					// 오른쪽 위
+					Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*(i + 1) + j];
+					Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
+				}
+				else {
+					Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*(i + 1) + j];
+					Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
+					Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
+				}
+			}
+			else if (i == MAP_SIZE - 1) {
+				if (j == 0) {
+					// 왼쪽 아래
+					Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
+					Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
+				}
+				else if (j == MAP_SIZE - 1) {
+					// 오른쪽 아래
+					Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
+					Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
+				}
+				else {
+					Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
+					Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
+					Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
+				}
+			}
+			else if (j == 0) {
+				Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
+				Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*i + (j - 1)];
+				Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
+			}
+			else if (j == MAP_SIZE - 1) {
+				Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i + 1) + j];
+				Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*i + (j - 1)];
+				Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j + 1)];
+			}
+			else {
+				Nodemap[MAP_SIZE*i + j].up = &Nodemap[MAP_SIZE*(i - 1) + j];
+				Nodemap[MAP_SIZE*i + j].down = &Nodemap[MAP_SIZE*(i + 1) + j];
+				Nodemap[MAP_SIZE*i + j].left = &Nodemap[MAP_SIZE*i + (j - 1)];
+				Nodemap[MAP_SIZE*i + j].right = &Nodemap[MAP_SIZE*i + (j + 1)];
+			}
+		}
+	}
+
+}
+
+void Robot::searchDijkstra()
+{
+
+}
+
+>>>>>>> origin/qbranch
 
 Node::Node(int xx, int yy, int cost) {
 	pos.x = xx;
