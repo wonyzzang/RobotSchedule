@@ -6,6 +6,7 @@
 #include <queue>
 #include <functional>
 #include <list>
+#include <windows.h>
 
 using namespace std;
 #define INF 10000
@@ -30,24 +31,7 @@ int hWallMatrix[MAP_SIZE - 1][MAP_SIZE];
 int vWallMatrix[MAP_SIZE][MAP_SIZE - 1];
 int terreinMatrix[MAP_SIZE][MAP_SIZE];
 
-class Node
-{
-public:
-	int nodeNum;
-	unsigned int nodeCost;	// 코스트
-	Node *prev = NULL;
 
-	Node(int xx, int yy, int cost)
-	{
-		nodeCost = cost;
-		nodeNum = MAP_SIZE*xx + yy;
-	}
-	Node()
-	{
-		nodeCost = 100000;
-		nodeNum = -1;
-	}
-};
 
 
 /* Class : Coordinate */
@@ -72,6 +56,27 @@ Coordinate::Coordinate(int xx, int yy)
 	x = xx;
 	y = yy;
 }
+
+class Node
+{
+public:
+	int nodeNum;
+	unsigned int nodeCost;	// 코스트
+	Node *prev = NULL;
+	Coordinate coord;
+
+	Node(int xx, int yy, int cost)
+	{
+		nodeCost = cost;
+		nodeNum = MAP_SIZE*xx + yy;
+		Coordinate coord = Coordinate(xx, yy);
+	}
+	Node()
+	{
+		nodeCost = 100000;
+		nodeNum = -1;
+	}
+};
 
 
 /* Class : Task */
@@ -112,17 +117,22 @@ public:
 		void shortestPath(int s, Robot *robot);
 	};
 
+	int robotnum;
+	void setrobotnum(int i);
 	Coordinate robotcoord;
 	Coordinate taskCoord[NUM_TASK];
 	int travelCost[MAP_SIZE][MAP_SIZE]; //travel cost of block Coordinate
 	int taskCost[NUM_TASK]; // cost of a task performed by this robot
+	int distance[MAP_SIZE*MAP_SIZE];
 	Task taskList[NUM_TASK];// list of tasks assgined to this robot
 
 	Node Nodemap[MAP_SIZE*MAP_SIZE];
+	vector<Coordinate> Itempath[NUM_TASK];
 	void setNodemap();
 
 	Graph robotgraph;
 	void setCostEdge();
+	void setItemPath(Coordinate Itemcoord[]);
 
 	int totalCost;// total energy consumed
 	int totalBlocks; // total number of blocks traveled
@@ -148,12 +158,6 @@ public:
 
 	void updatePostion();
 	bool atTask();
-
-
-
-
-
-
 
 };
 
@@ -187,7 +191,6 @@ Robot::Robot() {
 			travelCost[ii][jj] = 0;
 		}
 	}
-
 	totalCost = 0;
 	totalBlocks = 0;
 }
@@ -216,7 +219,7 @@ void Robot::assignTask(int taskId, std::vector<Coordinate> inputPath, Coordinate
 		next.x = itemList[taskId].x;
 		next.y = itemList[taskId].y;
 
-		printf("path assigned from (%d, %d) to (%d, %d)\n", current.x, current.y, next.x, next.y);
+		printf("Robot %d path assigned from (%d, %d) to (%d, %d)\n", robotnum , current.x, current.y, next.x, next.y);
 
 		//pass = pathValidation(inputPath, current, next);
 
@@ -306,6 +309,11 @@ bool Robot::atTask()
 	}
 }
 
+void Robot::setrobotnum(int i)
+{
+	robotnum = i;
+}
+
 void Robot::setNodemap()
 {
 	for (int ii = 0; ii < MAP_SIZE; ii++)
@@ -314,6 +322,8 @@ void Robot::setNodemap()
 		{
 			Nodemap[MAP_SIZE*ii + jj].nodeNum = MAP_SIZE*ii + jj;
 			Nodemap[MAP_SIZE*ii + jj].nodeCost = travelCost[ii][jj];
+			Nodemap[MAP_SIZE*ii + jj].coord.x = jj;
+			Nodemap[MAP_SIZE*ii + jj].coord.y = ii;
 		}
 	}
 }
@@ -328,18 +338,18 @@ void Robot::setCostEdge()
 				if (jj == 0) {
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj + 1, travelCost[ii][jj+1], travelCost[ii][jj]);	//right
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii+1) + jj, travelCost[ii+1][jj], travelCost[ii][jj]);	//down
-					printf("type 1 ");
+					//printf("%d %d type 1\n", ii, jj);
 				}
 				else if (jj == 9) {
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj - 1, travelCost[ii][jj - 1], travelCost[ii][jj]);	//left
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii + 1) + jj, travelCost[ii + 1][jj], travelCost[ii][jj]);//down
-					printf("type 2 ");
+					//printf("%d %d type 2\n", ii, jj);
 				}
 				else{
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj + 1, travelCost[ii][jj + 1], travelCost[ii][jj]);	//right
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj - 1, travelCost[ii][jj - 1], travelCost[ii][jj]);	//left
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii + 1) + jj, travelCost[ii + 1][jj], travelCost[ii][jj]);//down
-					printf("type 3 ");
+					//printf("%d %d type 3\n", ii, jj);
 				}
 			}
 			else if (ii == 9)
@@ -348,13 +358,13 @@ void Robot::setCostEdge()
 				{
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii - 1) + jj, travelCost[ii - 1][jj], travelCost[ii][jj]);//up
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj + 1, travelCost[ii][jj + 1], travelCost[ii][jj]);	//right
-					printf("type 4 ");
+					//printf("%d %d type 4\n", ii, jj);
 				}
 				else if (jj == 9)
 				{
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii - 1) + jj, travelCost[ii - 1][jj], travelCost[ii][jj]);//up
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj - 1, travelCost[ii][jj - 1], travelCost[ii][jj]);	//left
-					printf("type 5 ");
+					//printf("%d %d type 5\n", ii, jj);
 
 				}
 				else
@@ -362,7 +372,7 @@ void Robot::setCostEdge()
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii - 1) + jj, travelCost[ii - 1][jj], travelCost[ii][jj]);//up
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj + 1, travelCost[ii][jj + 1], travelCost[ii][jj]);	//right
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj - 1, travelCost[ii][jj - 1], travelCost[ii][jj]);	//left
-					printf("type 6 ");
+					//printf("%d %d type 6\n", ii, jj);
 				}
 			}
 			else
@@ -371,23 +381,44 @@ void Robot::setCostEdge()
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj + 1, travelCost[ii][jj + 1], travelCost[ii][jj]);	//right
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii - 1) + jj, travelCost[ii - 1][jj], travelCost[ii][jj]);//up
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii + 1) + jj, travelCost[ii + 1][jj], travelCost[ii][jj]);//down
-					printf("type 7 ");
+					//printf("%d %d type 7\n", ii, jj);
 				}
-				else if (jj = 9) {
-
+				else if (jj == 9) {
+					
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj - 1, travelCost[ii][jj - 1], travelCost[ii][jj]);	//left
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii - 1) + jj, travelCost[ii - 1][jj], travelCost[ii][jj]);//up
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii + 1) + jj, travelCost[ii + 1][jj], travelCost[ii][jj]);//down
-					printf("type 8 ");
+					//printf("%d %d type 8\n", ii, jj);
 				}
 				else {
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj - 1, travelCost[ii][jj - 1], travelCost[ii][jj]);	//left
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*ii + jj + 1, travelCost[ii][jj + 1], travelCost[ii][jj]);	//right
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii - 1) + jj, travelCost[ii - 1][jj], travelCost[ii][jj]);//up
 					robotgraph.addEdge(MAP_SIZE*ii + jj, MAP_SIZE*(ii + 1) + jj, travelCost[ii + 1][jj], travelCost[ii][jj]);//down
-					printf("type 9 ");
+					//printf("%d %d type 9\n", ii, jj);
 				}
 			}
+		}
+	}
+}
+
+void Robot::setItemPath(Coordinate Itemcoord[])
+{
+	Coordinate tempCoord;
+	for (int i = 0; i < NUM_TASK; i++)
+	{
+		// printf("Itemcoord input %d %d \n", Itemcoord[i].x, Itemcoord[i].y);
+		if (Itemcoord[i].x != 11) {
+			Itempath[i].push_back(Itemcoord[i]);
+			while (Nodemap[MAP_SIZE*Itemcoord[i].y + Itemcoord[i].x].prev != NULL)
+			{
+				tempCoord.x = Nodemap[MAP_SIZE*Itemcoord[i].y + Itemcoord[i].x].coord.x;
+				tempCoord.y = Nodemap[MAP_SIZE*Itemcoord[i].y + Itemcoord[i].x].coord.y;
+				Itempath[i].push_back(tempCoord);
+				Nodemap[MAP_SIZE*Itemcoord[i].y + Itemcoord[i].x] = *Nodemap[MAP_SIZE*Itemcoord[i].y + Itemcoord[i].x].prev;
+				//printf("Node <%d %d> \n", tempCoord.y, tempCoord.x);
+			}
+
 		}
 	}
 }
@@ -473,19 +504,20 @@ void Robot::Graph::shortestPath(int src, Robot *robot)
 				// Updating distance of v
 				dist[v] = dist[u] + weight;
 				(*robot).Nodemap[v].prev = &(*robot).Nodemap[u];
-				printf("%d %d\n", (*robot).Nodemap[v].nodeNum, (*robot).Nodemap[v].prev->nodeNum);
+				//printf("%d %d\n", (*robot).Nodemap[v].nodeNum, (*robot).Nodemap[v].prev->nodeNum);
 				pq.push(make_pair(dist[v], v));
 			}
 		}
 	}
 	// Print shortest distances stored in dist[]
-	printf("Vertex   Distance from Source\n");
+	//printf("Vertex   Distance from Source\n");
 	for (int i = 0; i < V; ++i)
-		printf("%d \t\t %d\n", i, dist[i]);
+		//printf("%d \t\t %d\n", i, dist[i]);
+		(*robot).distance[i] = dist[i] ;
 	Node copymap[MAP_SIZE*MAP_SIZE];
 	memcpy(&copymap, &(*robot).Nodemap, sizeof((*robot).Nodemap));
 	//Node point = *copymap;
-	for (int i = 0; i < V; i++) 
+	/*for (int i = 0; i < V; i++) 
 	{
 		Node point = copymap[i];
 		printf("%d : ", copymap[i].nodeNum);
@@ -495,6 +527,7 @@ void Robot::Graph::shortestPath(int src, Robot *robot)
 		}
 		printf("\n");
 	}
+	*/
 }
 
 
@@ -522,7 +555,7 @@ int pathValidation(std::vector <Coordinate> inputPath, Coordinate start, Coordin
 void print_result(Robot * robotList, int mode);
 std::vector <Coordinate> pathGeneration(Coordinate start, Coordinate end);
 RobotToTasks * forTest();
-int * scheduling(RobotToTasks * pathes, int robotNum, int taskNum);
+int * scheduling(RobotToTasks * pathes, int robotNum, int taskNum, Robot robotlist[]);
 
 
 void print_result(Robot  * robotList, int mode)
@@ -657,6 +690,18 @@ int pathValidation(std::vector <Coordinate> inputPath, Coordinate start, Coordin
 
 }
 
+vector <Coordinate> pathrev(vector <Coordinate> temppath) {
+	vector <Coordinate> path;
+	vector <Coordinate> path_rev = temppath;
+
+	for (int i = 0; i < temppath.size(); i++) {
+		path.push_back(temppath.back());
+		temppath.pop_back();
+	}
+	
+	return path;
+}
+
 std::vector <Coordinate> pathGeneration(Coordinate start, Coordinate end) {
 	std::vector <Coordinate> path;
 
@@ -701,7 +746,7 @@ std::vector <Coordinate> pathGeneration(Coordinate start, Coordinate end) {
 }
 
 
-int * scheduling(RobotToTasks * pathes, int robotNum, int taskNum) {
+int * scheduling(RobotToTasks * pathes, int robotNum, int taskNum, Robot robotlist[]) {
 	int * scheduledRobot = new int[robotNum];
 	int * scheduledTask = new int[taskNum];
 	int ** scheduleTable = new int *[taskNum];
@@ -796,8 +841,9 @@ int * scheduling(RobotToTasks * pathes, int robotNum, int taskNum) {
 		}
 	}
 
-	for (int i = 0; i < robotNum; i++) {
-		printf("robot%d is assigned to tast%d\n", i, scheduledRobot[i]);
+	for (int i = 0; i < robotNum; i++)
+	{
+		printf("robot %d is assigned to task %d with total cost %d \n", i, scheduledRobot[i], robotlist[i].distance[MAP_SIZE*robotlist[i].taskCoord[scheduledRobot[i]].y + robotlist[i].taskCoord[scheduledRobot[i]].x]);
 	}
 
 	return scheduledRobot;
@@ -944,6 +990,10 @@ int main()
 	fclose(fp);
 
 	Robot robotList[NUM_ROBOT];
+	for (int i = 0; i < NUM_ROBOT; i++)
+	{
+		robotList[i].setrobotnum(i);
+	}
 
 	printf("print map\n\n");
 	for (int ii = 0; ii < MAP_SIZE; ii++)
@@ -977,7 +1027,7 @@ int main()
 
 	//spawn tasks
 	Coordinate itemCoord[NUM_TASK];
-	for (int ii = 0; ii< NUM_TASK; ii++)
+	for (int ii = 0; ii < NUM_TASK; ii++)
 	{
 		itemCoord[ii].x = 11;
 		itemCoord[ii].y = 11;
@@ -1177,18 +1227,31 @@ int main()
 		printf("\n");
 	}
 	printf("\n");
-	robotList[0].setNodemap();
-	robotList[0].setCostEdge();
-	robotList[0].robotgraph.shortestPath(0, &robotList[0]);
+
+	for (int i = 0; i < NUM_ROBOT; i++) 
+	{
+		robotList[i].setNodemap();
+		robotList[i].setCostEdge();
+		robotList[i].robotgraph.shortestPath(MAP_SIZE * robotList[i].robotcoord.y + robotList[i].robotcoord.x, &robotList[i]);
+		robotList[i].setItemPath(itemCoord);
+	}
 
 
 	RobotToTasks * test = forTest();
-	int * scheduled = scheduling(test, 3, 4);
 
+	int * scheduled = scheduling(test, 3, 4, robotList);
 	for (int i = 0; i < 3; i++) {
 		int taskID = scheduled[i];
-		std::vector <Coordinate> path = pathGeneration(robotList[i].robotcoord, itemCoord[taskID]);
-		robotList[i].assignTask(scheduled[i], path, itemCoord);
+		//std::vector <Coordinate> path = pathGeneration(robotList[i].robotcoord, itemCoord[taskID]);
+		vector <Coordinate> path[NUM_ROBOT][NUM_TASK];
+		for (int i = 0; i < NUM_ROBOT; i++) {
+			for (int j = 0; j < NUM_TASK; j++) {
+				path[i][j] = pathrev(robotList[i].Itempath[j]);
+			}
+
+		}
+
+		robotList[i].assignTask(scheduled[i], path[i][0], itemCoord);
 	}
 
 	//currentPos.x = 1;
@@ -1216,6 +1279,7 @@ int main()
 
 	while (time < TIME_MAX && exitCondition == 0)
 	{
+		Sleep(200);
 		if (time == time_produced)
 		{
 			time_produced += TIME_MAX / NUM_TASK;
